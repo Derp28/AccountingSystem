@@ -1,0 +1,327 @@
+# TASKS.yaml — owners, dependencies, requirement mappings, status and evidence
+# Status values: todo | in_progress | blocked | done | deferred
+# A task is DONE only when its acceptance criteria and verification pass.
+
+meta:
+  project: Ledgerline accounting app
+  phase: Final signoff complete — Stage 2 local accounting app (Gate 3 passed; D-021 account-code change applied)
+  updated: 2026-10-20
+
+tasks:
+  - id: T-001
+    title: Discovery and environment verification
+    owner: Orchestrator
+    phase: 0
+    requirements: [QA-010]
+    depends_on: []
+    files: []
+    status: done
+    verification: "Node 24.22/node:sqlite/node:test verified; WSL-to-Windows loopback verified; browser tooling checked."
+
+  - id: T-002
+    title: Create documentation baseline
+    owner: Orchestrator
+    phase: 0
+    requirements: [QA-001]
+    depends_on: [T-001]
+    files: [AGENTS.md, REQUIREMENTS.md, TASKS.yaml, PLANS.md, DECISIONS.md, TEST_PLAN.md, UI_REVIEW.md]
+    status: done
+    verification: "Documents created from the approved plan and maintained through Stage 2."
+
+  - id: T-003
+    title: Requirements coverage self-audit
+    owner: Requirements Auditor
+    phase: 0
+    requirements: [QA-001, QA-011]
+    depends_on: [T-002]
+    files: [REQUIREMENTS.md, TASKS.yaml, TEST_PLAN.md]
+    status: done
+    verification: "Self-audit completed 2026-10-20; requirement-to-evidence map recorded in TEST_PLAN.md. No independent external audit is claimed."
+
+  - id: T-101
+    title: Scaffold, server, design tokens, shell and navigation
+    owner: UI Agent
+    phase: 1
+    requirements: [UI-001, UI-015, SEC-004]
+    depends_on: [T-002]
+    files: [package.json, scripts/dev.sh, public/index.html, public/css/**, public/js/app.js, public/js/router.js, public/js/components/nav.js, server/app.js]
+    status: done
+    verification: "Approved Stage 1 shell retained; 5/5 Playwright tests and 138 static checks pass."
+
+  - id: T-102
+    title: Onboarding, workspace naming, currency and data-mode banner
+    owner: UI Agent
+    phase: 1
+    requirements: [ONB-001, ONB-002, ONB-003, ONB-004, ONB-005, ONB-006, UI-012]
+    depends_on: [T-101]
+    files: [public/js/views/onboarding.js, public/js/views/workspace-setup.js, public/js/components/setup.js, public/js/state.js]
+    status: done
+    verification: "Full-screen Step 2 setup verified at 390 and 1440 px; no setup dialog remains. E2E onboarding and settings rename pass; real restart integration verifies profile/workspace/currency persistence."
+
+  - id: T-103
+    title: Dashboard with derived financial figures
+    owner: UI Agent
+    phase: 1
+    requirements: [UI-002, UI-011, ACC-009, ACC-010, ACC-016]
+    depends_on: [T-101]
+    files: [public/js/views/dashboard.js, server/services/reports.js]
+    status: done
+    verification: "Dashboard uses API-derived posted totals; E2E trial balance/equation and screenshots pass."
+
+  - id: T-104
+    title: Chart of Accounts list and editor
+    owner: UI Agent
+    phase: 1
+    requirements: [UI-003, UI-004, ACC-001, ACC-015]
+    depends_on: [T-101]
+    files: [public/js/views/accounts.js, server/routes/accounts.js, server/services/accounts.js]
+    status: done
+    verification: "E2E add account verifies prefilled next codes and range rejection; integration covers CRUD, uniqueness, inactive-account rules, and per-category seed codes."
+
+  - id: T-105
+    title: Business Transactions list and editor
+    owner: UI Agent
+    phase: 1
+    requirements: [UI-005, UI-006, UI-010, ACC-002, ACC-003, ACC-013]
+    depends_on: [T-101]
+    files: [public/js/views/transactions.js, public/js/components/entry-form.js]
+    status: done
+    verification: "E2E sale draft/post and journal consistency pass; integration covers drafts and lifecycle."
+
+  - id: T-106
+    title: General Journal view and editor
+    owner: UI Agent
+    phase: 1
+    requirements: [UI-007, UI-008, UI-010, ACC-004, ACC-017]
+    depends_on: [T-101, T-105]
+    files: [public/js/views/journal.js, public/js/components/entry-form.js]
+    status: done
+    verification: "E2E journal row/expansion path and balance behavior pass; date/number ordering covered by integration."
+
+  - id: T-107
+    title: Adjustments list and manual editor
+    owner: UI Agent
+    phase: 1
+    requirements: [UI-009, ACC-007, ACC-012]
+    depends_on: [T-101, T-105]
+    files: [public/js/views/adjustments.js]
+    status: done
+    verification: "E2E adjustment draft/post/reverse passes; integration enforces type/reason."
+
+  - id: T-108
+    title: Responsive and accessibility polish
+    owner: UI Agent
+    phase: 1
+    requirements: [UI-013, UI-014, UI-001]
+    depends_on: [T-101, T-102, T-103, T-104, T-105, T-106, T-107]
+    files: [public/css/**, public/js/components/**]
+    status: done
+    verification: "Mobile drawer/Escape and 390 px overflow assertions pass; screenshots captured at 1440/768/390."
+
+  - id: T-109
+    title: UI checks, screenshots, launch docs and review record
+    owner: QA Agent
+    phase: 1
+    requirements: [UI-010, UI-011, UI-012, QA-002, QA-010, QA-011]
+    depends_on: [T-108]
+    files: [tests/e2e/**, screenshots/**, UI_REVIEW.md, TEST_PLAN.md]
+    status: done
+    verification: "Stage 1 and Stage 2 UI approved by the user on 2026-10-20; Stage 2 screenshots and 5/5 Playwright evidence recorded."
+
+  - id: T-201
+    title: SQLite schema, migrations, pragmas and triggers
+    owner: Backend/Accounting Agent
+    phase: 2
+    requirements: [DB-001, DB-002, DB-003, DB-004, DB-007, DB-008, ACC-011, SEC-007]
+    depends_on: [T-109, GATE-1]
+    files: [server/db/**, migrations/**]
+    status: done
+    verification: "Migrations apply idempotently; 138 static/schema checks pass; immutability/posting and account-code range trigger tests pass."
+
+  - id: T-202
+    title: Database connection, transactions, money and validation utilities
+    owner: Backend/Accounting Agent
+    phase: 2
+    requirements: [DB-005, DB-010, ACC-011, SEC-002]
+    depends_on: [T-201]
+    files: [server/db/connection.js, server/lib/**]
+    status: done
+    verification: "WAL/foreign keys/busy timeout/BEGIN IMMEDIATE verified; exact-cents and prepared-SQL checks pass."
+
+  - id: T-203
+    title: Bootstrap, profile and workspace APIs
+    owner: Backend/Accounting Agent
+    phase: 2
+    requirements: [ONB-001, ONB-002, ONB-003, ONB-004, ONB-005, ONB-006, DB-004, SEC-001, SEC-003]
+    depends_on: [T-202]
+    files: [server/routes/setup.js, server/services/setup.js]
+    status: done
+    verification: "HTTP CRUD and real restart test pass; renames/currency persist; loopback binding verified."
+
+  - id: T-204
+    title: Chart of Accounts API and lifecycle
+    owner: Backend/Accounting Agent
+    phase: 2
+    requirements: [ACC-001, ACC-015, UI-003, UI-004]
+    depends_on: [T-202]
+    files: [server/routes/accounts.js, server/services/accounts.js]
+    status: done
+    verification: "Integration covers CRUD, case-insensitive uniqueness, category hundred-series validation, deactivation, and blocked new use."
+
+  - id: T-205
+    title: Draft entry CRUD, numbering and idempotency
+    owner: Backend/Accounting Agent
+    phase: 2
+    requirements: [ACC-002, ACC-003, ACC-008, ACC-012, ACC-013, ACC-014]
+    depends_on: [T-202, T-204]
+    files: [server/routes/entries.js, server/services/entries.js]
+    status: done
+    verification: "Draft CRUD, optimistic concurrency, source-prefixed numbering, and duplicate request tests pass."
+
+  - id: T-206
+    title: Posting service and balance enforcement
+    owner: Backend/Accounting Agent
+    phase: 2
+    requirements: [ACC-004, ACC-005, ACC-006, ACC-009, ACC-010, ACC-017, DB-005, DB-007]
+    depends_on: [T-205]
+    files: [server/services/entries.js, migrations/001_core.sql]
+    status: done
+    verification: "Atomic post/reject tests and DB balance trigger pass; drafts excluded; posted rows immutable."
+
+  - id: T-207
+    title: Reversal workflow
+    owner: Backend/Accounting Agent
+    phase: 2
+    requirements: [ACC-006, ACC-007, DB-007]
+    depends_on: [T-206]
+    files: [server/services/entries.js, migrations/001_core.sql]
+    status: done
+    verification: "Linked reversal, required reason, one-per-entry, no reversal-of-reversal, and net-zero tests pass."
+
+  - id: T-208
+    title: Dashboard and report aggregation
+    owner: Backend/Accounting Agent
+    phase: 2
+    requirements: [ACC-009, ACC-010, ACC-011, ACC-016]
+    depends_on: [T-206]
+    files: [server/routes/dashboard.js, server/services/reports.js]
+    status: done
+    verification: "Trial balance and category/equation totals derive from posted lines; E2E equation passes."
+
+  - id: T-209
+    title: Replace mock state with API while preserving approved UI
+    owner: UI Agent
+    phase: 2
+    requirements: [UI-002, UI-003, UI-004, UI-005, UI-006, UI-007, UI-008, UI-009, UI-010, UI-011, ACC-013]
+    depends_on: [T-203, T-204, T-205, T-206, T-207, T-208]
+    files: [public/js/api.js, public/js/state.js, public/js/views/**, public/js/components/entry-form.js]
+    status: done
+    verification: "Client state is API-backed; 5/5 E2E tests pass; no mock-data cloning remains."
+
+  - id: T-210
+    title: Error UX, security headers and origin checks
+    owner: UI Agent + Backend/Accounting Agent
+    phase: 2
+    requirements: [UI-010, UI-011, SEC-003, SEC-004, SEC-005, SEC-006, SEC-008]
+    depends_on: [T-209]
+    files: [server/middleware/**, public/js/**]
+    status: done
+    verification: "Bad Origin/content-type/JSON/oversize tests and XSS E2E pass; CSP/static checks pass; npm audit 0."
+
+  - id: T-211
+    title: Unit, integration, invariant and security tests
+    owner: QA Agent
+    phase: 2
+    requirements: [QA-003, QA-004, QA-005, QA-006, QA-008]
+    depends_on: [T-206, T-207, T-208]
+    files: [tests/unit/**, tests/integration/**]
+    status: done
+    verification: "30/30 tests pass (10 unit + 20 integration), including rollback, immutability, duplicate, account-code ranges, and restart."
+
+  - id: T-212
+    title: End-to-end critical path
+    owner: QA Agent
+    phase: 2
+    requirements: [QA-007, QA-009, QA-002]
+    depends_on: [T-209]
+    files: [tests/e2e/**]
+    status: done
+    verification: "5/5 Playwright tests pass: critical path, rename, mobile, XSS, screenshots."
+
+  - id: T-213
+    title: Traceability and coverage self-audit
+    owner: Requirements Auditor
+    phase: 2
+    requirements: [QA-001, QA-011]
+    depends_on: [T-211, T-212]
+    files: [REQUIREMENTS.md, TASKS.yaml, TEST_PLAN.md]
+    status: done
+    verification: "Requirement-to-evidence map and deferrals recorded in TEST_PLAN.md. Self-audit only."
+
+  - id: T-301
+    title: Full critical-path and invariant suite
+    owner: QA Agent
+    phase: 3
+    requirements: [QA-008, QA-010]
+    depends_on: [GATE-2]
+    files: [tests/**, scripts/check.mjs]
+    status: done
+    verification: "Executed as Stage 2 closure: 30 backend tests, 5 E2E tests, 138 static checks, all passing."
+
+  - id: T-302
+    title: Restart, persistence and migration verification
+    owner: QA Agent
+    phase: 3
+    requirements: [DB-006, ONB-004, QA-005]
+    depends_on: [GATE-2]
+    files: [tests/integration/restart.test.js]
+    status: done
+    verification: "Real child-process stop/restart against the same SQLite file passes; migrations idempotency passes."
+
+  - id: T-303
+    title: Security review and dependency audit
+    owner: QA Agent + Backend/Accounting Agent
+    phase: 3
+    requirements: [SEC-001, SEC-007, SEC-008, QA-006]
+    depends_on: [GATE-2]
+    files: [server/middleware/security.js, tests/integration/http.test.js, package-lock.json]
+    status: done
+    verification: "Loopback/origin/content-type/body/XSS/SQL tests pass; npm audit reports 0 vulnerabilities. No independent penetration test claimed."
+
+  - id: T-304
+    title: Regression, documentation and final evidence
+    owner: Orchestrator
+    phase: 3
+    requirements: [DB-009, QA-009, QA-010, QA-011]
+    depends_on: [T-301, T-302, T-303]
+    files: [TEST_PLAN.md, TASKS.yaml, PLANS.md, AGENTS.md, DECISIONS.md, UI_REVIEW.md]
+    status: done
+    verification: "Stage 2 closure evidence and manual backup procedure recorded; no later-stage feature work started."
+
+  - id: T-305
+    title: Sequential per-category seed codes and editable code auto-fill
+    owner: UI Agent + Backend/Accounting Agent
+    phase: 3
+    requirements: [UI-004, ACC-001]
+    depends_on: [T-104, T-204]
+    files: [migrations/004_sequential_seed_codes.sql, public/js/accounting.js, public/js/views/accounts.js, public/js/mock-data.js, tests/**]
+    status: done
+    verification: "D-021 implemented after final signoff: seeds renumbered to 100–103, 200–201, 300, 400, 500–501 via migration 004; new-account code prefills the next unused category code and stays editable. Live database at schema 4 with no data loss; 138/138 static, 30/30 backend, 5/5 E2E."
+
+gates:
+  - id: GATE-0
+    name: Discovery
+    status: passed
+    evidence: "Environment verified in session; recorded in PLANS.md."
+  - id: GATE-1
+    name: UI approval
+    status: passed
+    evidence: "User explicitly approved the Stage 1 UI on 2026-10-20; recorded in UI_REVIEW.md."
+  - id: GATE-2
+    name: Accounting integrity
+    status: passed
+    evidence: "Technical criteria passed: 30/30 backend tests, 5/5 E2E tests, 138/138 static checks, real restart, and npm audit 0 vulnerabilities. Stage 2 UI approved and policies D-016, D-018, D-019, D-021 confirmed by the user on 2026-10-20."
+  - id: GATE-3
+    name: Final verification / later-stage scope
+    status: passed
+    evidence: "User accepted final product signoff for the current Stage 2 scope on 2026-10-20. Final verification: 30/30 backend tests, 5/5 E2E tests, 138/138 static checks, real restart, npm audit 0 vulnerabilities, live database migrated to schema 4 after the D-021 account-code change. No later-stage feature scope authorized."
