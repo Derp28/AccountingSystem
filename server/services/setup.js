@@ -1,15 +1,21 @@
-import { ConflictError, ValidationError } from "../lib/errors.js";
 import { normalizeProfileInput, normalizeWorkspaceInput } from "../lib/validation.js";
 import { transaction } from "../db/connection.js";
 
-function mapProfile(row) {
-  if (!row) return null;
-  return { name: row.name, createdAt: row.created_at, updatedAt: row.updated_at };
-}
-
-function mapWorkspace(row) {
+function mapUser(row) {
   if (!row) return null;
   return {
+    id: row.id,
+    username: row.username,
+    name: row.display_name,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapLedger(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
     name: row.name,
     currency: row.currency,
     createdAt: row.created_at,
@@ -17,53 +23,41 @@ function mapWorkspace(row) {
   };
 }
 
-export function getProfile(db) {
-  return mapProfile(db.prepare("SELECT * FROM profile WHERE id = 1").get());
+export function getProfile(db, userId = null) {
+  const row = userId
+    ? db.prepare("SELECT * FROM users WHERE id = ?").get(userId)
+    : db.prepare("SELECT * FROM users ORDER BY created_at LIMIT 1").get();
+  return mapUser(row);
 }
 
-export function getWorkspace(db) {
-  return mapWorkspace(db.prepare("SELECT * FROM workspace WHERE id = 1").get());
+export function getWorkspace(db, ledgerId = null) {
+  const row = ledgerId
+    ? db.prepare("SELECT * FROM ledgers WHERE id = ?").get(ledgerId)
+    : db.prepare("SELECT * FROM ledgers ORDER BY created_at LIMIT 1").get();
+  return mapLedger(row);
 }
 
-export function saveProfile(db, body) {
+export function saveProfile(db, userId, body) {
   const input = normalizeProfileInput(body);
   return transaction(db, () => {
-    const now = new Date().toISOString();
-    db.prepare(`
-      INSERT INTO profile (id, name, created_at, updated_at)
-      VALUES (1, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at
-    `).run(input.name, now, now);
-    return getProfile(db);
+    db.prepare("UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?").run(
+      input.name,
+      new Date().toISOString(),
+      userId,
+    );
+    return getProfile(db, userId);
   });
 }
 
-export function saveWorkspace(db, body) {
+export function saveWorkspace(db, ledgerId, body) {
   const input = normalizeWorkspaceInput(body);
   return transaction(db, () => {
-    if (!getProfile(db)) {
-      throw new ConflictError("Create a profile before naming the workspace.", [
-        { field: "workspace", message: "Create a profile before naming the workspace." },
-      ]);
-    }
-    const now = new Date().toISOString();
-    db.prepare(`
-      INSERT INTO workspace (id, name, currency, created_at, updated_at)
-      VALUES (1, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        name = excluded.name,
-        currency = excluded.currency,
-        updated_at = excluded.updated_at
-    `).run(input.name, input.currency, now, now);
-    return getWorkspace(db);
-  });
-}
-
-export function requireSetup(db) {
-  if (!getProfile(db)) {
-    throw new ValidationError(
-      [{ field: "setup", message: "Complete profile setup first." }],
-      "Complete profile setup first.",
+    db.prepare("UPDATE ledgers SET name = ?, currency = ?, updated_at = ? WHERE id = ?").run(
+      input.name,
+      input.currency,
+      new Date().toISOString(),
+      ledgerId,
     );
-  }
+    return getWorkspace(db, ledgerId);
+  });
 }

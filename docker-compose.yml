@@ -1,0 +1,19 @@
+services:
+  ledgerline:
+    build: .
+    image: ledgerline:local
+    # Publish only on the host loopback interface. Do not change this to
+    # 0.0.0.0:3000 unless you intend to expose the app to your network.
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      LEDGERLINE_CONTAINER: "1"
+      ACCOUNTING_DB_PATH: data/accounting.sqlite
+    volumes:
+      - ledgerline-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  ledgerline-data:

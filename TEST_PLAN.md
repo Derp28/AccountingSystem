@@ -2,9 +2,9 @@
 
 ## Scope
 
-Stage 2 verifies the local Express + SQLite implementation of the approved Ledgerline UI. It covers persistence, migrations, posting, immutability, reversal, duplicate/partial-write prevention, transaction-to-journal consistency, security controls, and the critical browser path. Stage 1 was a UI-only prototype and is recorded separately.
+Stage 3 verifies the local Express + SQLite implementation of the approved Ledgerline UI plus local username/password access, multiple ledgers, and the adjusted/unadjusted reports. It covers persistence, migrations, posting, immutability, reversal, duplicate/partial-write prevention, transaction-to-journal consistency, security controls, sessions and CSRF, ledger isolation, the three reports, and the critical browser path. Stage 1 was a UI-only prototype and is recorded separately. Evidence for the approved Stage 2 core remains valid.
 
-Formal reports, exports, period close, tax/VAT/statutory logic, multi-currency conversion, multiple workspaces, authentication, and automated backup are out of scope and are not claimed.
+Period close, exports, automated adjustment schedules, tax/VAT/statutory logic, multi-currency conversion, and automated backup are out of scope and are not claimed.
 
 ## Environment
 
@@ -14,7 +14,7 @@ Formal reports, exports, period close, tax/VAT/statutory logic, multi-currency c
 - E2E: `http://127.0.0.1:3100`, database `data/e2e.sqlite`
 - Browser: Playwright Chromium in WSL; `scripts/test-e2e.sh` supplies user-local browser libraries
 - SQLite: Node built-in `node:sqlite`, SQLite 3.53.4
-- Date of this evidence run: 2026-10-20
+- Date of this evidence run: 2026-10-21
 
 ## Commands
 
@@ -23,10 +23,11 @@ export PATH=/home/derp_28/.nvm/versions/node/v24.22.0/bin:$PATH
 cd /home/derp_28/accounting-app
 
 ./scripts/dev.sh              # start the app on 127.0.0.1:3000
-node scripts/check.mjs        # static, schema, API, and security checks
+node scripts/check.mjs        # static, schema, API, security, auth, reports, distribution checks
 bash scripts/test.sh          # unit + integration tests, including restart
-bash scripts/test-e2e.sh      # Playwright critical path, rename, mobile, XSS, screenshots
+bash scripts/test-e2e.sh      # Playwright auth, critical path, reports, mobile, XSS, screenshots
 npm audit                     # dependency audit
+npm run auth:reset-password -- <username>   # offline password reset (revokes sessions)
 ```
 
 ## Risk matrix
@@ -45,6 +46,13 @@ npm audit                     # dependency audit
 | SQL injection | High | Prepared statements; metacharacter test; static interpolation check |
 | XSS | High | Escaped rendering; CSP; browser XSS test with script/img/svg payloads |
 | Unauthorized remote mutation | High | Loopback binding; Host/Origin checks; JSON-only test |
+| Unauthorized local access | High | scrypt password check; 401/403 HTTP tests; E2E claim/sign-in/lock |
+| Stolen session or CSRF | High | Server-side sessions; HttpOnly/SameSite cookie; CSRF header test; idle/absolute expiry |
+| Brute-force sign-in | Medium | Five-failure lockout test; generic credential errors |
+| Cross-ledger data leak | High | Ledger-scoped queries/indexes; isolation triggers; integration isolation test |
+| Wrong adjusted/unadjusted totals | High | Server integer-cent calculation; basis filter; integration invariant tests; E2E basis toggle |
+| Unbalanced balance sheet | High | Server balance check; integration test over both bases |
+| Personal data shipped in a copy | High | `data/`/`.env` ignored and excluded from the image; fresh empty database per copy |
 | Database file exposed | Medium | `0600` mode test; path not returned by API |
 | Restart loses data | High | Child-process stop/start test against one database file |
 | Migration replay corrupts data | High | Idempotency test on an already migrated database |
@@ -59,13 +67,13 @@ npm audit                     # dependency audit
 
 Command: `node scripts/check.mjs`
 
-Result: **138 passed, 0 failed.** Covers required files, syntax/import resolution, absence of browser storage, Stage 1 accounting fixtures, migration invariants, integer-cent columns, trigger count and messages, account-code range triggers, per-category sequential seed codes, WAL/foreign-key/busy-timeout/`BEGIN IMMEDIATE`, database permissions, loopback refusal, CSP and security middleware, API route registration, prepared-SQL checks, no `eval`, client API usage, package scripts, and `.gitignore`.
+Result: **182 passed, 0 failed.** Covers required files, syntax/import resolution, absence of browser storage, Stage 1 accounting fixtures, migration invariants, integer-cent columns, trigger count and messages, account-code range triggers, per-category sequential seed codes, WAL/foreign-key/busy-timeout/`BEGIN IMMEDIATE`, database permissions, loopback refusal, CSP and security middleware, API route registration, prepared-SQL checks, no `eval`, client API usage, package scripts, and `.gitignore`. Stage 3 additions assert migration 005's auth/ledger schema and isolation triggers, the scrypt/session/lockout safeguards, the cookie and CSRF middleware, the three report routes and adjusted-basis filter, the Docker loopback/boundary settings, and that `data/`/`.env` stay ignored while `.env.example` is kept.
 
 ### Unit and integration tests
 
 Command: `bash scripts/test.sh`
 
-Result: **30 tests, 30 passed, 0 failed** (10 unit + 20 integration).
+Result: **38 tests, 38 passed, 0 failed** (10 unit + 28 integration).
 
 Unit coverage:
 
@@ -98,19 +106,27 @@ Integration coverage:
 - Exact decimal API conversion and excess-precision rejection.
 - Bad Origin, wrong content type, malformed JSON, and oversized payload rejection.
 - SQL metacharacters and markup stored as inert data.
-- **Actual server process restart**: stop the child server, restart against the same SQLite file, and verify profile/workspace renames, posted entry, balances, trial balance, and equation.
+- **Actual server process restart**: stop the child server, restart against the same SQLite file, and verify the local account, ledger, posted entry, balances, trial balance, and equation; the stored session survives and a fresh sign-in also works.
+- Stage 3 claim: creates the local account, ledger, and session; a second claim is rejected; the session resolves.
+- Stage 3 login: verifies the password, rejects four wrong attempts with 401, locks on the fifth with 429, and a reset changes the password and revokes sessions.
+- Stage 3 ledger isolation: a new ledger gets its own seeded chart; the same account code is allowed in two ledgers; entries and reports do not leak across ledgers; cross-ledger account references are rejected.
+- Stage 3 reports: adjusted trial balance includes the adjustment, unadjusted excludes it and the linked reversal; income statement period totals and net income; balance sheet balances on both bases with computed accumulated earnings; invalid basis and reversed date ranges are rejected.
 
 ### Browser end-to-end tests
 
 Command: `bash scripts/test-e2e.sh`
 
-Result: **5 tests, 5 passed, 0 failed.**
+Result: **9 tests, 9 passed, 0 failed.**
 
-1. Critical path: onboarding → full-screen workspace Step 2 → seeded COA → add account (asserting prefilled next codes `104` and `502`, then rejecting an out-of-range code) → sale draft → post → journal → adjustment draft/post → reversal → reload → dashboard trial balance/equation. Starts at 390 px to assert Step 2 is in front and above the fold with no dialog.
-2. Profile/workspace rename through settings → reload → renamed values persist.
-3. Mobile navigation: 390 px drawer, Escape close, no page-level horizontal overflow.
-4. Screenshot capture at 1440×900, 768×1024, and 390×844 for Dashboard, Chart of Accounts, Business Transactions, General Journal, and Adjustments.
-5. XSS: user markup in account name/description renders as text; no script/img/svg execution; no page errors.
+1. First run: the claim screen fits a 390 px viewport; short password, mismatched confirmation, and empty ledger name each produce inline errors; valid input creates the account and opens the dashboard.
+2. Lock and sign-in: "Lock now" shows the sign-in screen (not first-run setup), a wrong password shows a generic error, and the correct password returns to the dashboard.
+3. Ledgers: a second ledger is created, becomes active with its own seeded Chart of Accounts, and the sidebar switches back to the first ledger.
+4. Critical path: seeded COA → add account (asserting prefilled next codes `104` and `502`, then rejecting an out-of-range code) → sale draft → post → journal → adjustment draft/post → reversal → reload → dashboard trial balance/equation.
+5. Profile/ledger rename through settings → reload → renamed values persist.
+6. Mobile navigation: 390 px drawer, Escape close, no page-level horizontal overflow.
+7. Reports: adjusted/unadjusted trial balance, income statement for a June period, and balance sheet with the computed accumulated earnings line.
+8. Screenshot capture at 1440×900, 768×1024, and 390×844 for Dashboard, Chart of Accounts, Business Transactions, General Journal, Adjustments, and Reports.
+9. XSS: user markup in account name/description renders as text; no script/img/svg execution; no page errors.
 
 ### Dependency audit
 
@@ -126,24 +142,29 @@ Result: `express@5.3.0`, `@playwright/test@1.64.1`.
 
 Directory: `screenshots/`
 
-- `dashboard-1440.png`, `accounts-1440.png`, `transactions-1440.png`, `journal-1440.png`, `adjustments-1440.png`
-- `dashboard-768.png`, `accounts-768.png`, `transactions-768.png`, `journal-768.png`, `adjustments-768.png`
-- `dashboard-390.png`, `accounts-390.png`, `transactions-390.png`, `journal-390.png`, `adjustments-390.png`
+- `dashboard-1440.png`, `accounts-1440.png`, `transactions-1440.png`, `journal-1440.png`, `adjustments-1440.png`, `reports-1440.png`
+- `dashboard-768.png`, `accounts-768.png`, `transactions-768.png`, `journal-768.png`, `adjustments-768.png`, `reports-768.png`
+- `dashboard-390.png`, `accounts-390.png`, `transactions-390.png`, `journal-390.png`, `adjustments-390.png`, `reports-390.png`
 - `mobile-navigation-390.png`
-- `setup-1440.png`, `setup-390.png`
+- `setup-1440.png`, `setup-390.png` (superseded by the Stage 3 claim screen)
 
 ## Requirement-to-evidence map
 
 | Requirement group | Evidence |
 |---|---|
-| ONB-001..006 | E2E onboarding, rename, and restart integration; API/DB singleton and validation tests |
-| UI-001..015 | E2E critical path, mobile drawer, settings rename, screenshots, static checks, CSS/accessibility review; data-mode banner inspected |
+| ONB-001..006 (superseded) | Historical Stage 2 onboarding; replaced by AUTH/LED groups in Stage 3 |
+| AUTH-001..008 | Claim/login/lock E2E; HTTP 401/403 tests; lockout and reset integration; static scrypt/session/cookie checks |
+| LED-001..004 | Ledger switcher E2E; isolation and new-ledger integration; `data/`/`.env` ignore checks |
+| REP-001..005 | Report integration invariants; reports E2E (basis toggle, three tabs); static route/basis checks |
+| UI-001..015 | E2E auth, critical path, mobile drawer, reports, settings rename, screenshots, static checks, CSS/accessibility review |
 | ACC-001..017 | Unit validation, integration lifecycle/immutability/reversal/balances/equation, E2E critical path, schema triggers |
-| ACC-018 | Explicit deferral; not implemented |
-| DB-001..008, DB-010 | Migration/schema checks, integrity tests, real restart, prepared-SQL check |
+| ACC-018 | Period close, exports, tax, multi-currency, and automated adjustments deferred; formal statements implemented as REP-001..005 |
+| DB-001..008, DB-010..012 | Migration/schema checks, integrity tests, real restart, ledger isolation triggers, prepared-SQL check |
 | DB-009 | Manual stopped-server backup documented in `PLANS.md`; automated backup deferred |
-| SEC-001..008 | Loopback checks, Origin/content-type/body-limit tests, XSS test, SQL injection test, error hygiene review, `0600` test, CSP/static checks, `npm audit` |
-| QA-001..011 | Traceability self-audit, 138 static checks, 30 backend tests, 5 E2E tests, restart, screenshots, exact evidence in this file |
+| DB-013 | Migration 005 preserves legacy data by assigning it to `ledger-default`; string checks plus backup of the live file |
+| SEC-001..008 | Loopback checks, Origin/content-type/body-limit tests, CSRF/session tests, XSS test, SQL injection test, error hygiene review, `0600` test, CSP/static checks, `npm audit` |
+| DIST-001..003 | Docker/compose/.env.example/README static checks; `data/` and `.env` excluded from git and the image |
+| QA-001..014 | Traceability self-audit, 182 static checks, 38 backend tests, 9 E2E tests, restart, screenshots, exact evidence in this file |
 
 This mapping is a **self-audit** by the implementing agent; no independent external audit is claimed.
 
@@ -162,14 +183,26 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-10-20 | Screenshot capture | PASS, 18 PNGs | `screenshots/` |
 | 2026-10-20 | Post-signoff sequential account-code change (D-021, migration 004) | PASS | Live database migrated to schema 4; 138/138 static, 30/30 backend, 5/5 Playwright; profile/workspace/seed accounts preserved |
 | 2026-10-20 | Final product signoff | PASS | User accepted current Stage 2 scope; `TASKS.yaml` Gate 3 |
+| 2026-10-21 | Live database pre-migration backup | PASS | `data/backups/pre-005-20261021/` contains `accounting.sqlite` and its WAL/SHM sidecars |
+| 2026-10-21 | `node scripts/check.mjs` | PASS, 182/182 | Terminal output; auth, ledger, report, and distribution checks |
+| 2026-10-21 | `bash scripts/test.sh` | PASS, 38/38 | Unit + integration output; includes auth/ledger/report suites and the restart test |
+| 2026-10-21 | `bash scripts/test-e2e.sh` | PASS, 9/9 | Playwright output; auth, critical path, reports, mobile, XSS, screenshots |
+| 2026-10-21 | `npm run auth:reset-password` (offline) | PASS | Reset succeeds and revokes sessions; unknown username exits non-zero (verified against a temporary database) |
+| 2026-10-21 | `npm audit` | PASS, 0 vulnerabilities | Terminal output |
+| 2026-10-21 | `git check-ignore` | PASS | `data/accounting.sqlite`, `data/e2e.sqlite`, and `.env` are ignored |
 
 ## Known limitations
 
-- Formal statements, exports, period close, automated adjustment schedules, tax/VAT/statutory rules, multi-currency conversion, and multiple workspaces are deferred.
+- Period close, exports, automated adjustment schedules, tax/VAT/statutory rules, and multi-currency conversion are deferred. The trial balance, income statement, and balance sheet **are** implemented (REP-001..005).
 - Automated backup is not implemented; only the documented stopped-server file copy exists.
-- The app has no authentication or authorization beyond loopback binding, same-origin mutation checks, JSON-only mutations, and the local-only threat model.
-- There is no CSRF token, rate limiting, or account lockout; these are not meaningful protections for a single-user loopback app but would be required before remote use.
+- The password protects the running app, not the SQLite file. Data-at-rest protection requires full-disk encryption; the app says so on the access screen.
+- There is no email recovery or password-reset link; recovery is the offline `npm run auth:reset-password` command.
+- Entry numbering is global across ledgers (D-027); per-ledger numbering is not implemented.
+- Ledgers are separate sets of books, not a multi-user workspace; there are no roles, sharing, or membership.
 - SQLite is a single-writer local store; concurrent multi-user access is not supported.
+- The GitHub release workflow was not executed here; its configuration is statically checked only.
+- Migration 005 has not yet been applied to the live `data/accounting.sqlite` (schema 4); it applies on the next server start, after the pre-migration backup.
+- The Stage 3 UI has not yet been reviewed or approved by the user.
 - Account codes are constrained to three-digit category hundred-series ranges by D-018; out-of-range codes are rejected by the API, UI, and database triggers.
 - Reversals use the approved D-019 policy: server current UTC date and `GENERAL_JOURNAL` source type.
 - Reversal of a posted entry whose account was later deactivated is allowed as the approved D-016 correction path.

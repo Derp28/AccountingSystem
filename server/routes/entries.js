@@ -21,36 +21,41 @@ export function entryRoutes(db) {
   const router = express.Router();
 
   router.get("/", (req, res) => {
-    res.json({ entries: listEntries(db) });
+    res.json({ entries: listEntries(db, req.ledgerId) });
   });
 
   router.get("/:id", (req, res) => {
-    const entry = getEntry(db, checkedId(req.params.id));
+    const entry = getEntry(db, req.ledgerId, checkedId(req.params.id));
     if (!entry) throw new NotFoundError("The entry was not found.");
     res.json({ entry });
   });
 
   router.post("/", (req, res) => {
     const clientRequestId = req.get("Idempotency-Key") || req.body?.clientRequestId;
-    const result = createDraft(db, req.body, { clientRequestId });
+    const result = createDraft(db, req.ledgerId, req.body, { clientRequestId });
     res.status(result.idempotent ? 200 : 201).json(result);
   });
 
   router.put("/:id", (req, res) => {
-    res.json({ entry: updateDraft(db, checkedId(req.params.id), req.body) });
+    res.json({ entry: updateDraft(db, req.ledgerId, checkedId(req.params.id), req.body) });
   });
 
   router.delete("/:id", (req, res) => {
-    res.json(deleteDraft(db, checkedId(req.params.id)));
+    res.json(deleteDraft(db, req.ledgerId, checkedId(req.params.id)));
   });
 
   router.post("/:id/post", (req, res) => {
-    res.json({ entry: postEntry(db, checkedId(req.params.id)) });
+    res.json({ entry: postEntry(db, req.ledgerId, checkedId(req.params.id)) });
   });
 
   router.post("/:id/reverse", (req, res) => {
     const clientRequestId = req.get("Idempotency-Key") || req.body?.clientRequestId;
-    res.json(reverseEntry(db, checkedId(req.params.id), { ...req.body, clientRequestId }));
+    res.json(
+      reverseEntry(db, req.ledgerId, checkedId(req.params.id), {
+        ...req.body,
+        clientRequestId,
+      }),
+    );
   });
 
   return router;

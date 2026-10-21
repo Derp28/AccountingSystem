@@ -60,6 +60,8 @@ const requiredFiles = [
   "public/js/views/transactions.js",
   "public/js/views/journal.js",
   "public/js/views/adjustments.js",
+  "public/js/views/auth.js",
+  "public/js/views/reports.js",
   "server/index.js",
   "server/app.js",
   "server/db/connection.js",
@@ -67,8 +69,13 @@ const requiredFiles = [
   "server/lib/errors.js",
   "server/lib/money.js",
   "server/lib/validation.js",
+  "server/lib/seed-accounts.js",
   "server/middleware/security.js",
+  "server/middleware/auth.js",
   "server/routes/index.js",
+  "server/routes/auth.js",
+  "server/routes/ledgers.js",
+  "server/routes/reports.js",
   "server/routes/setup.js",
   "server/routes/accounts.js",
   "server/routes/entries.js",
@@ -78,16 +85,31 @@ const requiredFiles = [
   "server/services/accounts.js",
   "server/services/entries.js",
   "server/services/reports.js",
+  "server/services/auth.js",
   "migrations/001_core.sql",
   "migrations/002_seed_accounts.sql",
   "migrations/003_account_code_ranges.sql",
   "migrations/004_sequential_seed_codes.sql",
+  "migrations/005_local_auth_multi_ledger.sql",
+  "scripts/reset-password.mjs",
+  "Dockerfile",
+  "docker-compose.yml",
+  ".env.example",
+  "README.md",
+  ".github/workflows/release.yml",
   "tests/unit/money.test.js",
   "tests/unit/validation.test.js",
   "tests/integration/accounting.test.js",
   "tests/integration/http.test.js",
   "tests/integration/restart.test.js",
+  "tests/integration/auth-ledgers.test.js",
+  "tests/integration/reports.test.js",
+  "tests/e2e/helpers.js",
+  "tests/e2e/auth.spec.js",
   "tests/e2e/critical-path.spec.js",
+  "tests/e2e/reports.spec.js",
+  "tests/e2e/screenshots.spec.js",
+  "tests/e2e/xss.spec.js",
   "playwright.config.js",
 ];
 
@@ -226,9 +248,16 @@ const coreSql = readProject("migrations/001_core.sql");
 const seedSql = readProject("migrations/002_seed_accounts.sql");
 const accountRangeSql = readProject("migrations/003_account_code_ranges.sql");
 const sequentialSeedSql = readProject("migrations/004_sequential_seed_codes.sql");
+const authSql = readProject("migrations/005_local_auth_multi_ledger.sql");
 const connectionSource = readProject("server/db/connection.js");
 const securitySource = readProject("server/middleware/security.js");
+const authMiddleware = readProject("server/middleware/auth.js");
+const authService = readProject("server/services/auth.js");
+const reportsService = readProject("server/services/reports.js");
+const reportsRoute = readProject("server/routes/reports.js");
 const indexSource = readProject("server/index.js");
+const dockerfile = readProject("Dockerfile");
+const compose = readProject("docker-compose.yml");
 const clientState = readProject("public/js/state.js");
 const clientApi = readProject("public/js/api.js");
 const packageJson = JSON.parse(readProject("package.json"));
@@ -375,7 +404,100 @@ if (/^data\/$/m.test(ignore) && /node_modules\//.test(ignore)) {
   fail(".gitignore does not exclude data/ and node_modules/");
 }
 
-console.log("Ledgerline Stage 2 static, schema, and data checks");
+if (/^\.env$/m.test(ignore) && /!\.env\.example/m.test(ignore) && /\*\.sqlite/m.test(ignore)) {
+  pass(".gitignore excludes environment files and stray SQLite files while keeping .env.example");
+} else {
+  fail(".gitignore does not exclude environment files or stray SQLite files");
+}
+
+// ---------------------------------------------------------------------------
+// Auth, multi-ledger, reports, and distribution checks.
+// ---------------------------------------------------------------------------
+const authTriggerCount = (authSql.match(/CREATE TRIGGER/gi) || []).length;
+if (
+  /CREATE TABLE users/.test(authSql) &&
+  /CREATE TABLE ledgers/.test(authSql) &&
+  /CREATE TABLE sessions/.test(authSql) &&
+  /idx_accounts_ledger_code_unique/.test(authSql) &&
+  /ADD COLUMN ledger_id/.test(authSql) &&
+  /trg_single_local_user/.test(authSql) &&
+  /trg_lines_account_same_ledger_insert/.test(authSql) &&
+  /trg_reversal_links_same_ledger/.test(authSql) &&
+  authTriggerCount >= 6
+) {
+  pass("migration 005 adds local users, sessions, ledgers, ledger scoping, and isolation triggers");
+} else {
+  fail("migration 005 is missing auth, ledger scoping, or isolation triggers");
+}
+
+if (
+  /scrypt/.test(authService) &&
+  /timingSafeEqual/.test(authService) &&
+  /SESSION_IDLE_MS/.test(authService) &&
+  /SESSION_ABSOLUTE_MS/.test(authService) &&
+  /MAX_FAILED_ATTEMPTS/.test(authService) &&
+  /DELETE FROM sessions WHERE user_id/.test(authService)
+) {
+  pass("auth service uses scrypt, constant-time comparison, session limits, lockout, and session revocation");
+} else {
+  fail("auth service is missing a hashing, session, or lockout safeguard");
+}
+
+if (
+  /HttpOnly/.test(authMiddleware) &&
+  /SameSite=Strict/.test(authMiddleware) &&
+  /requireCsrf/.test(authMiddleware) &&
+  /AUTH_REQUIRED/.test(authMiddleware)
+) {
+  pass("session cookie and CSRF middleware protect authenticated mutations");
+} else {
+  fail("session cookie or CSRF middleware is incomplete");
+}
+
+if (
+  /getIncomeStatement/.test(reportsService) &&
+  /getBalanceSheet/.test(reportsService) &&
+  /source_type <> 'ADJUSTMENT'/.test(reportsService) &&
+  /accumulatedEarningsCents/.test(reportsService) &&
+  /trial-balance/.test(reportsRoute) &&
+  /income-statement/.test(reportsRoute) &&
+  /balance-sheet/.test(reportsRoute)
+) {
+  pass("reports service and routes implement adjusted/unadjusted trial balance, income statement, and balance sheet");
+} else {
+  fail("reports service or routes are incomplete");
+}
+
+if (
+  /node:24/.test(dockerfile) &&
+  /USER node/.test(dockerfile) &&
+  /LEDGERLINE_CONTAINER/.test(dockerfile) &&
+  /127\.0\.0\.1/.test(compose) &&
+  /ledgerline-data/.test(compose)
+) {
+  pass("Docker packaging pins Node 24, drops to the node user, and publishes on host loopback only");
+} else {
+  fail("Docker packaging is missing a Node version, non-root user, or loopback port binding");
+}
+
+if (
+  clientState.includes("api.bootstrap") &&
+  readProject("public/js/router.js").includes("renderReports") &&
+  readProject("public/js/router.js").includes("renderLogin") &&
+  readProject("public/js/views/auth.js").includes("data-claim-form")
+) {
+  pass("client renders the local sign-in/claim screens and the reports view");
+} else {
+  fail("client auth screens or reports view are not wired into the router");
+}
+
+if (scripts["auth:reset-password"]) {
+  pass("package scripts expose the offline password reset command");
+} else {
+  fail("package scripts are missing auth:reset-password");
+}
+
+console.log("Ledgerline local accounting app static, schema, and data checks");
 console.log("-------------------------------------------------");
 for (const message of passes) console.log(`PASS  ${message}`);
 if (failures.length > 0) {

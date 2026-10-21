@@ -8,11 +8,37 @@ const NAV_ITEMS = [
   { route: "/transactions", label: "Business Transactions", icon: "transactions" },
   { route: "/journal", label: "General Journal", icon: "journal" },
   { route: "/adjustments", label: "Adjustments", icon: "adjustments" },
+  { route: "/reports", label: "Reports", icon: "chart" },
 ];
 
+function ledgerSwitcher(state) {
+  const ledgers = state.auth?.ledgers || [];
+  const active = state.auth?.activeLedger;
+  if (ledgers.length === 0) return "";
+  return `
+    <div class="ledger-switcher">
+      <label class="ledger-switcher-label" for="ledger-switcher">Ledger</label>
+      <select class="ledger-switcher-select" id="ledger-switcher" data-ledger-switcher aria-label="Switch ledger">
+        ${ledgers
+          .map(
+            (ledger) => `
+              <option value="${escapeHtml(ledger.id)}" ${ledger.id === active?.id ? "selected" : ""}>
+                ${escapeHtml(ledger.name)} · ${escapeHtml(ledger.currency)}
+              </option>
+            `,
+          )
+          .join("")}
+      </select>
+      <button class="btn btn-ghost btn-sm ledger-switcher-new" type="button" data-new-ledger>
+        ${icon("plus", 14)} New ledger
+      </button>
+    </div>
+  `;
+}
+
 export function renderSidebar(state, activeRoute) {
-  const profileName = state.profile?.name || "Profile";
-  const workspaceName = state.workspace?.name || "Workspace not named";
+  const profileName = state.profile?.name || state.auth?.user?.displayName || "Local user";
+  const workspaceName = state.workspace?.name || "Ledger not named";
 
   return `
     <aside class="sidebar" id="sidebar" aria-label="Main navigation">
@@ -26,6 +52,8 @@ export function renderSidebar(state, activeRoute) {
           ${icon("close", 19)}
         </button>
       </div>
+
+      ${ledgerSwitcher(state)}
 
       <div class="nav-group">
         <div class="nav-label">Workspace</div>
@@ -48,7 +76,7 @@ export function renderSidebar(state, activeRoute) {
       <div class="sidebar-spacer"></div>
 
       <div class="sidebar-footer">
-        <button class="user-card" type="button" data-open-settings aria-label="Open profile and workspace settings">
+        <button class="user-card" type="button" data-open-settings aria-label="Open profile and ledger settings">
           <span class="user-avatar" aria-hidden="true">${escapeHtml(formatInitials(profileName))}</span>
           <span class="user-meta">
             <span class="user-name">${escapeHtml(profileName)}</span>
@@ -56,7 +84,10 @@ export function renderSidebar(state, activeRoute) {
           </span>
           ${icon("settings", 15)}
         </button>
-        <p class="sidebar-note">Local mode. Data is stored in SQLite and posted entries are immutable.</p>
+        <button class="btn btn-ghost btn-sm sidebar-lock" type="button" data-lock-now>
+          ${icon("lock", 14)} Lock now
+        </button>
+        <p class="sidebar-note">Local mode. Data is stored in SQLite, posted entries are immutable, and the session locks after 30 idle minutes.</p>
       </div>
     </aside>
 
@@ -72,14 +103,14 @@ export function renderMobileBar(state) {
       </button>
       <div class="mobile-brand">
         <strong>Ledgerline</strong>
-        <span>${escapeHtml(state.workspace?.name || "Workspace not named")}</span>
+        <span>${escapeHtml(state.workspace?.name || "Ledger not named")}</span>
       </div>
       <span class="badge badge-posted">Local</span>
     </header>
   `;
 }
 
-export function mountNav(root, { onSettings } = {}) {
+export function mountNav(root, { onSettings, onSwitchLedger, onNewLedger, onLock } = {}) {
   const frame = root.querySelector(".app-frame") || root.closest(".app-frame") || root;
   const openButton = root.querySelector("[data-nav-open]");
   const closeButtons = root.querySelectorAll("[data-nav-close]");
@@ -121,6 +152,20 @@ export function mountNav(root, { onSettings } = {}) {
   root.querySelector("[data-open-settings]")?.addEventListener("click", () => {
     if (isOpen) setOpen(false);
     onSettings?.();
+  });
+
+  root.querySelector("[data-lock-now]")?.addEventListener("click", () => {
+    if (isOpen) setOpen(false);
+    onLock?.();
+  });
+
+  root.querySelector("[data-new-ledger]")?.addEventListener("click", () => {
+    if (isOpen) setOpen(false);
+    onNewLedger?.();
+  });
+
+  root.querySelector("[data-ledger-switcher]")?.addEventListener("change", (event) => {
+    onSwitchLedger?.(event.target.value);
   });
 
   // If the viewport grows while the drawer is open, return to the desktop layout.

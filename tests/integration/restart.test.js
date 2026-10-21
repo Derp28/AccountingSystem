@@ -7,6 +7,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { fileURLToPath } from "node:url";
+import { TEST_PASSWORD, TEST_USERNAME } from "../helpers/fixtures.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -56,6 +57,11 @@ async function stopServer(child) {
   if (child.exitCode === null) await once(child, "exit");
 }
 
+function cookieFrom(response) {
+  const values = response.headers.getSetCookie?.() || [response.headers.get("set-cookie") || ""];
+  return String(values[0] || "").split(";")[0];
+}
+
 function jsonRequest(base, pathname, method, body, headers = {}) {
   return fetch(`${base}${pathname}`, {
     method,
@@ -64,7 +70,7 @@ function jsonRequest(base, pathname, method, body, headers = {}) {
   });
 }
 
-test("a real server restart preserves profile, workspace, posted entries, and balances", async () => {
+test("a real server restart preserves the local account, ledger, posted entries, and balances", async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "ledgerline-restart-"));
   const dbPath = path.join(directory, "restart.sqlite");
   const port = await freePort();
@@ -74,13 +80,35 @@ test("a real server restart preserves profile, workspace, posted entries, and ba
   try {
     await waitForServer(base);
 
-    const profile = await jsonRequest(base, "/api/profile", "PUT", { name: "Restart Studio" });
-    assert.equal(profile.status, 200);
-    const workspace = await jsonRequest(base, "/api/workspace", "PUT", {
-      name: "Restart Books",
+    const claimResponse = await jsonRequest(base, "/api/auth/claim", "POST", {
+      displayName: "Restart Studio",
+      username: TEST_USERNAME,
+      password: TEST_PASSWORD,
+      ledgerName: "Restart Books",
       currency: "USD",
     });
-    assert.equal(workspace.status, 200);
+    assert.equal(claimResponse.status, 201);
+    const cookie = cookieFrom(claimResponse);
+    const { auth } = await claimResponse.json();
+    const csrf = auth.csrfToken;
+    const authHeaders = { Cookie: cookie, "X-CSRF-Token": csrf };
+
+    const renamedProfile = await jsonRequest(
+      base,
+      "/api/profile",
+      "PUT",
+      { name: "Restart Studio Renamed" },
+      authHeaders,
+    );
+    assert.equal(renamedProfile.status, 200);
+    const renamedWorkspace = await jsonRequest(
+      base,
+      "/api/workspace",
+      "PUT",
+      { name: "Restart Books 2026", currency: "USD" },
+      authHeaders,
+    );
+    assert.equal(renamedWorkspace.status, 200);
 
     const created = await jsonRequest(
       base,
@@ -95,24 +123,20 @@ test("a real server restart preserves profile, workspace, posted entries, and ba
           { accountId: "acct-400", debitCents: 0, creditCents: 4250 },
         ],
       },
-      { "Idempotency-Key": "restart-entry-1" },
+      { ...authHeaders, "Idempotency-Key": "restart-entry-1" },
     );
     assert.equal(created.status, 201);
     const entry = (await created.json()).entry;
-    const posted = await jsonRequest(base, `/api/entries/${entry.id}/post`, "POST", {});
+    const posted = await jsonRequest(
+      base,
+      `/api/entries/${entry.id}/post`,
+      "POST",
+      {},
+      authHeaders,
+    );
     assert.equal(posted.status, 200);
 
-    const renamedProfile = await jsonRequest(base, "/api/profile", "PUT", {
-      name: "Restart Studio Renamed",
-    });
-    assert.equal(renamedProfile.status, 200);
-    const renamedWorkspace = await jsonRequest(base, "/api/workspace", "PUT", {
-      name: "Restart Books 2026",
-      currency: "USD",
-    });
-    assert.equal(renamedWorkspace.status, 200);
-
-    const before = await (await fetch(`${base}/api/bootstrap`)).json();
+    const before = await (await fetch(`${base}/api/bootstrap`, { headers: authHeaders })).json();
     assert.equal(before.profile.name, "Restart Studio Renamed");
     assert.equal(before.entries[0].status, "POSTED");
     assert.equal(before.accounts.find((account) => account.code === "100").balanceCents, 4250);
@@ -125,8 +149,10 @@ test("a real server restart preserves profile, workspace, posted entries, and ba
 
     child = startServer(port, dbPath);
     await waitForServer(base);
-    const after = await (await fetch(`${base}/api/bootstrap`)).json();
 
+    // The stored session survives the restart.
+    const after = await (await fetch(`${base}/api/bootstrap`, { headers: authHeaders })).json();
+    assert.equal(after.auth.authenticated, true);
     assert.equal(after.profile.name, "Restart Studio Renamed");
     assert.equal(after.workspace.name, "Restart Books 2026");
     assert.equal(after.workspace.currency, "USD");
@@ -136,6 +162,14 @@ test("a real server restart preserves profile, workspace, posted entries, and ba
     assert.equal(after.accounts.find((account) => account.code === "100").balanceCents, 4250);
     assert.equal(after.trialBalance.differenceCents, 0);
     assert.equal(after.dashboard.equationDifferenceCents, 0);
+
+    // A fresh sign-in also works against the restarted server.
+    const login = await jsonRequest(base, "/api/auth/login", "POST", {
+      username: TEST_USERNAME,
+      password: TEST_PASSWORD,
+    });
+    assert.equal(login.status, 200);
+    assert.ok(cookieFrom(login).startsWith("ledgerline_session="));
   } finally {
     if (child) await stopServer(child);
     fs.rmSync(directory, { recursive: true, force: true });

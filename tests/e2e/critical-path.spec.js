@@ -1,33 +1,13 @@
 import { test, expect } from "@playwright/test";
+import { ensureAuthenticated } from "./helpers.js";
 
-test("critical path: onboarding, COA, transaction, post, journal, adjustment, reversal, restart", async ({
+test("critical path: COA, transaction, post, journal, adjustment, reversal, reload", async ({
   page,
 }) => {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
-  // Start on mobile to prove Step 2 appears in front, above the fold, rather
-  // than being appended below the page.
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Welcome to Ledgerline" })).toBeVisible();
-
-  // Profile and workspace onboarding.
-  await page.locator("#profile-name").fill("E2E Studio");
-  await page.getByRole("button", { name: /Continue to workspace/i }).click();
-  const setupCard = page.locator(".onboarding-form-card");
-  await expect(setupCard).toBeVisible();
-  await expect(page.locator("dialog[open]")).toHaveCount(0);
-  const setupBox = await setupCard.boundingBox();
-  expect(setupBox).not.toBeNull();
-  expect(setupBox.y).toBeGreaterThanOrEqual(0);
-  expect(setupBox.y + setupBox.height).toBeLessThanOrEqual(844);
-  await page.locator("#setup-workspace-name").fill("E2E Books");
-  await page.locator("#setup-currency").fill("USD");
-  await page.getByRole("button", { name: /Open workspace/i }).click();
-  await page.setViewportSize({ width: 1280, height: 720 });
-  await expect(page.getByRole("heading", { name: /Welcome back, E2E Studio/i })).toBeVisible();
-  await expect(page.getByText("E2E Books · USD workspace")).toBeVisible();
+  await ensureAuthenticated(page);
 
   // Chart of accounts uses the approved hundreds series and survives a reload.
   await page.getByRole("link", { name: "Chart of Accounts", exact: true }).click();
@@ -122,7 +102,7 @@ test("critical path: onboarding, COA, transaction, post, journal, adjustment, re
   // Reload to prove the data came from SQLite, not browser memory.
   await page.reload();
   await page.getByRole("link", { name: "Dashboard", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /Welcome back, E2E Studio/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Welcome back,/ })).toBeVisible();
   await page.getByRole("link", { name: "General Journal", exact: true }).click();
   await expect(page.locator("[data-journal-row]").filter({ hasText: "E2E sale" })).toBeVisible();
   await expect(
@@ -132,7 +112,7 @@ test("critical path: onboarding, COA, transaction, post, journal, adjustment, re
     page.locator('[data-journal-row][data-type="GENERAL_JOURNAL"]').filter({ hasText: "Reversal of" }),
   ).toBeVisible();
   await expect(
-    page.locator('[data-journal-row][data-type="ADJUSTMENT"]').filter({ hasText: "ADJ-000002" }),
+    page.locator('[data-journal-row][data-type="ADJUSTMENT"]').filter({ hasText: "ADJ-" }),
   ).toContainText("Reversed");
 
   // The dashboard is derived from posted lines after the reversal nets to zero.
@@ -143,15 +123,8 @@ test("critical path: onboarding, COA, transaction, post, journal, adjustment, re
   expect(pageErrors).toEqual([]);
 });
 
-test("profile and workspace renames persist across a reload", async ({ page }) => {
-  await page.goto("/");
-  if (await page.locator("#profile-name").isVisible().catch(() => false)) {
-    await page.locator("#profile-name").fill("Rename Studio");
-    await page.getByRole("button", { name: /Continue to workspace/i }).click();
-    await page.locator("#setup-workspace-name").fill("Rename Books");
-    await page.locator("#setup-currency").fill("USD");
-    await page.getByRole("button", { name: /Open workspace/i }).click();
-  }
+test("profile and ledger renames persist across a reload", async ({ page }) => {
+  await ensureAuthenticated(page);
 
   await page.locator("[data-open-settings]").click();
   const dialog = page.locator("dialog[open]");
@@ -168,16 +141,7 @@ test("profile and workspace renames persist across a reload", async ({ page }) =
 
 test("mobile navigation opens, closes with Escape, and keeps the layout usable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  // The web server is shared with the critical-path test, which normally leaves
-  // a saved profile behind. Support a fresh database too.
-  if (await page.locator("#profile-name").isVisible().catch(() => false)) {
-    await page.locator("#profile-name").fill("Mobile Studio");
-    await page.getByRole("button", { name: /Continue to workspace/i }).click();
-    await page.locator("#setup-workspace-name").fill("Mobile Books");
-    await page.locator("#setup-currency").fill("USD");
-    await page.getByRole("button", { name: /Open workspace/i }).click();
-  }
+  await ensureAuthenticated(page);
 
   const menu = page.getByRole("button", { name: "Open navigation" });
   await menu.click();
@@ -194,4 +158,3 @@ test("mobile navigation opens, closes with Escape, and keeps the layout usable",
   );
   expect(overflow).toBeLessThanOrEqual(1);
 });
-

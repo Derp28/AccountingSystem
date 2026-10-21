@@ -5,3 +5,11 @@ test-results/
 playwright-report/
 .DS_Store
 *.log
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+coverage/
+dist/

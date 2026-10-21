@@ -1,9 +1,15 @@
-import { api } from "./api.js";
+import { api, setCsrfToken } from "./api.js";
+import { todayIso } from "./format.js";
 
 const listeners = new Set();
 
+function firstOfMonth() {
+  return `${todayIso().slice(0, 7)}-01`;
+}
+
 function createInitialState() {
   return {
+    auth: { claimed: false, authenticated: false, setupRequired: true },
     profile: null,
     workspace: null,
     accounts: [],
@@ -22,6 +28,13 @@ function createInitialState() {
       transactions: { query: "", type: "ALL", status: "ALL" },
       journal: { query: "", status: "ALL", sourceType: "ALL" },
       adjustments: { query: "", type: "ALL" },
+    },
+    reports: {
+      tab: "trial-balance",
+      basis: "adjusted",
+      asOf: todayIso(),
+      from: firstOfMonth(),
+      to: todayIso(),
     },
   };
 }
@@ -42,8 +55,10 @@ function emit() {
 }
 
 function applyBootstrap(payload) {
-  state.profile = payload.profile;
-  state.workspace = payload.workspace;
+  state.auth = payload.auth || { claimed: false, authenticated: false, setupRequired: true };
+  setCsrfToken(state.auth.csrfToken || null);
+  state.profile = payload.profile || null;
+  state.workspace = payload.workspace || null;
   state.accounts = payload.accounts || [];
   state.entries = payload.entries || [];
   state.dashboard = payload.dashboard || null;
@@ -64,11 +79,8 @@ export function markBooted() {
 }
 
 export async function resetState() {
-  const fresh = createInitialState();
-  fresh.ui.booted = true;
-  fresh.profile = state.profile;
-  fresh.workspace = state.workspace;
-  state = fresh;
+  state = createInitialState();
+  state.ui.booted = true;
   emit();
   await loadState();
 }
@@ -81,8 +93,87 @@ function toResult(error) {
   return { ok: false, errors, error };
 }
 
-function findEntry(entryId) {
-  return state.entries.find((entry) => entry.id === entryId);
+export async function claimAccount(input) {
+  try {
+    await api.claim(input);
+    await loadState();
+    return { ok: true };
+  } catch (error) {
+    return toResult(error);
+  }
+}
+
+export async function loginUser(input) {
+  try {
+    await api.login(input);
+    await loadState();
+    return { ok: true };
+  } catch (error) {
+    return toResult(error);
+  }
+}
+
+export async function logoutUser() {
+  try {
+    await api.logout();
+  } catch {
+    // Clearing the local screen still matters if the session already expired.
+  }
+  await refreshLockedState();
+  return { ok: true };
+}
+
+export async function lockNow() {
+  try {
+    await api.lock();
+  } catch {
+    // Locking the screen remains available if the session is already gone.
+  }
+  await refreshLockedState();
+  return { ok: true };
+}
+
+/**
+ * After a lock or sign-out the installation is usually still claimed, so the
+ * next screen is sign-in rather than first-run setup. Re-read bootstrap to find
+ * out, and fall back to a locked-but-claimed state if that request fails.
+ */
+async function refreshLockedState() {
+  const previousAuth = state.auth || {};
+  setCsrfToken(null);
+  try {
+    await loadState();
+  } catch {
+    state = createInitialState();
+    state.auth = {
+      claimed: previousAuth.claimed ?? true,
+      authenticated: false,
+      setupRequired: false,
+      displayName: previousAuth.displayName,
+    };
+    state.ui.booted = true;
+    emit();
+  }
+}
+
+export async function switchLedger(ledgerId) {
+  try {
+    await api.switchLedger(ledgerId);
+    await loadState();
+    return { ok: true };
+  } catch (error) {
+    return toResult(error);
+  }
+}
+
+export async function createLedger(input) {
+  try {
+    await api.createLedger(input);
+    await loadState();
+    return { ok: true };
+  } catch (error) {
+    return toResult(error);
+  }
 }
 
 export async function setProfile(name) {
@@ -166,7 +257,7 @@ export async function addEntry(input) {
 }
 
 export async function updateEntry(entryId, input) {
-  const existing = findEntry(entryId);
+  const existing = state.entries.find((entry) => entry.id === entryId);
   try {
     const payload = await api.updateEntry(entryId, {
       ...input,
@@ -212,4 +303,9 @@ export async function reverseEntry(entryId, reason) {
 export function setUiFilter(section, patch) {
   if (!state.ui[section]) state.ui[section] = {};
   Object.assign(state.ui[section], patch);
+}
+
+export function setReportFilter(patch) {
+  Object.assign(state.reports, patch);
+  emit();
 }

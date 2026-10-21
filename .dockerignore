@@ -1,0 +1,13 @@
+node_modules
+data
+screenshots
+test-results
+playwright-report
+tests
+playwright.config.js
+.git
+.github
+.gitignore
+*.log
+.env
+.env.*

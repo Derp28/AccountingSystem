@@ -53,7 +53,7 @@ function mountGlobalActions() {
     openConfirm({
       title: "Reload data from the database?",
       eyebrow: "Local database",
-      description: "This re-reads the profile, workspace, accounts, and entries from the SQLite file.",
+      description: "This re-reads the local account, ledgers, accounts, and entries from the SQLite file.",
       message:
         "Nothing is deleted. Drafts, posted entries, and reversals stay exactly as they are stored on this machine.",
       confirmLabel: "Reload data",
@@ -64,6 +64,18 @@ function mountGlobalActions() {
         showToast("Reloaded", "The interface now mirrors the local database.", "info", 4200);
       },
     });
+  });
+
+  let handlingUnauthorized = false;
+  window.addEventListener("ledgerline:unauthorized", async () => {
+    if (handlingUnauthorized) return;
+    handlingUnauthorized = true;
+    try {
+      await loadState();
+      showToast("Session locked", "Sign in again to continue.", "info", 4200);
+    } finally {
+      handlingUnauthorized = false;
+    }
   });
 
   window.addEventListener("unhandledrejection", (event) => {

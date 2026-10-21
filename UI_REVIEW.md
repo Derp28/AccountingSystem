@@ -1,8 +1,9 @@
-# UI_REVIEW.md — Stage 1 and Stage 2 approval records
+# UI_REVIEW.md — Stage 1, Stage 2, and Stage 3 approval records
 
 **Stage 1 status:** Approved by the user on 2026-10-20.
 **Stage 2 status:** UI approved and final product signoff accepted by the user on 2026-10-20.
-**Build:** Stage 2 local Express + SQLite app using the approved Stage 1 visual system.
+**Stage 3 status:** Implemented and automatically verified on 2026-10-21; **awaiting user UI review**. Not yet approved.
+**Build:** Stage 3 local Express + SQLite app using the approved Stage 1/2 visual system, adding local access screens, a ledger switcher, and a Reports page.
 **Reviewer:** User approved the Stage 1 and Stage 2 UI; automated evidence was produced by the implementation team.
 
 ## Launch
@@ -43,6 +44,40 @@ Screenshots at the required widths:
 - Mobile drawer: `screenshots/mobile-navigation-390.png`
 
 The browser run also asserts no page errors, no page-level horizontal overflow at 390 px, Escape-to-close navigation, and that markup entered as account text renders as inert text.
+
+## Stage 3 UI changes while preserving the approved layout
+
+- A **first-run claim screen** replaces the Stage 2 two-step onboarding: display name, username, password (with confirmation), first ledger name, and currency. It fits a 390 px viewport with no horizontal scroll.
+- A **sign-in screen** appears when the install is locked or signed out. It keeps the same ledger-paper styling and shows the local-only privacy note.
+- The sidebar gains a **ledger switcher** (`Ledger` select) and a **Lock now** control. A **New ledger** action opens the existing modal pattern for name and currency.
+- Settings gains **Lock now** and **Sign out** actions and renames “workspace” wording to “ledger” where it refers to the active set of books.
+- A new **Reports** page (`/reports`) adds three tabs — Trial balance, Income statement, Balance sheet — with a shared **Adjusted / Unadjusted** toggle, as-of/period date inputs, and a Refresh control. All three pages keep the ledger-paper card design.
+- The dashboard trial-balance card links to the Reports page.
+
+## Stage 3 automated UI evidence
+
+Command: `bash scripts/test-e2e.sh`
+
+Result: **9/9 passed** (claim/sign-in/lock, ledger switching, critical path, rename, mobile navigation, reports, XSS, screenshots). The claim screen is checked at 390 px for fit and inline validation. See `TEST_PLAN.md` for exact coverage.
+
+Screenshots at the required widths now include the Reports page:
+
+- Desktop 1440×900: `screenshots/dashboard-1440.png`, `accounts-1440.png`, `transactions-1440.png`, `journal-1440.png`, `adjustments-1440.png`, `reports-1440.png`
+- Tablet 768×1024: `screenshots/dashboard-768.png`, `accounts-768.png`, `transactions-768.png`, `journal-768.png`, `adjustments-768.png`, `reports-768.png`
+- Mobile 390×844: `screenshots/dashboard-390.png`, `accounts-390.png`, `transactions-390.png`, `journal-390.png`, `adjustments-390.png`, `reports-390.png`
+- Mobile drawer: `screenshots/mobile-navigation-390.png`
+
+## Stage 3 review checklist (evidence-backed, pending user approval)
+
+- [x] First launch shows the claim screen; a valid claim creates the account, ledger, and session.
+- [x] Invalid claim input shows inline errors and `aria-invalid` (short password, mismatched confirmation, missing ledger name).
+- [x] “Lock now” shows the sign-in screen (not first-run setup); a wrong password shows a generic error.
+- [x] The sidebar exposes a ledger switcher and a New ledger action; switching changes the active ledger.
+- [x] A new ledger receives its own seeded Chart of Accounts and starts with no entries.
+- [x] The Reports page shows trial balance, income statement, and balance sheet on a shared adjusted/unadjusted toggle.
+- [x] Zero-balance accounts are hidden; the balance sheet shows a computed accumulated-earnings line and a balanced indicator.
+- [x] Desktop, tablet, and mobile layouts remain usable; no console errors.
+- [ ] **User approval of the Stage 3 UI** — pending.
 
 ## Stage 1 approval record
 
@@ -92,12 +127,18 @@ The checklist below records the acceptance checks. Automated coverage is in `TES
 
 ## Known UI limitations
 
-- Formal reports, exports, period close, automated adjustments, tax, multi-currency conversion, multiple workspaces, and authentication are not present.
-- The dashboard is a snapshot plus trial balance, not a formal statement package.
+- Period close, exports, automated adjustments, tax, multi-currency conversion, and roles/sharing are not present.
+- The password protects the running app, not the SQLite file; the access screen states that data-at-rest protection needs full-disk encryption.
+- There is no email recovery or reset link; recovery is the offline `npm run auth:reset-password` command.
+- Ledgers are separate sets of books, not a multi-user workspace.
+- The dashboard is a snapshot plus trial balance, not a formal statement package; the Reports page holds the statements.
 - Error states are practical server messages, not a full offline/conflict-resolution workflow.
 - Screenshots are synthetic E2E data and may include a keyboard focus ring on the page heading.
 - Automated accessibility coverage is targeted; no axe or screen-reader audit is claimed.
+- The Stage 3 UI has not yet been approved by the user.
 
 ## Feedback
 
 Stage 2 UI and final product scope were approved by the user on 2026-10-20. Accounting policies D-016, D-018, and D-019 were confirmed the same day; D-018 range enforcement is implemented and tested. After signoff, the user requested +1 per-category account codes; D-021 implements the sequential seed codes and editable next-code prefill, recorded above.
+
+**Stage 3 (2026-10-21):** the user requested a local username/password login, multiple ledgers under one local account, and unadjusted/adjusted trial balance, income statement, and balance sheet, distributed as source on GitHub plus self-hosted Docker/release copies with no public hosting. That scope is implemented, documented in `DECISIONS.md` (D-022..D-031), and automatically verified. **UI approval is the outstanding gate.**

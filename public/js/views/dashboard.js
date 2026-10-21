@@ -232,7 +232,7 @@ export function renderDashboard(container, state) {
             <span class="help">Trial balance difference: <strong>${escapeHtml(
               formatMoney((trial.totalDebitCents || 0) - (trial.totalCreditCents || 0), currency),
             )}</strong></span>
-            <a class="btn btn-ghost btn-sm" href="#/accounts">View chart of accounts ${icon(
+            <a class="btn btn-ghost btn-sm" href="#/reports">Open reports ${icon(
               "arrow-right",
               14,
             )}</a>

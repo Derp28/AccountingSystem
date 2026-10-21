@@ -5,29 +5,24 @@ import {
   saveProfile,
   saveWorkspace,
 } from "../services/setup.js";
-import { getBootstrap } from "../services/bootstrap.js";
 
 export function setupRoutes(db) {
   const router = express.Router();
 
-  router.get("/bootstrap", (req, res) => {
-    res.json(getBootstrap(db));
-  });
-
   router.get("/profile", (req, res) => {
-    res.json({ profile: getProfile(db) });
+    res.json({ profile: getProfile(db, req.auth.user.id) });
   });
 
   router.put("/profile", (req, res) => {
-    res.json({ profile: saveProfile(db, req.body) });
+    res.json({ profile: saveProfile(db, req.auth.user.id, req.body) });
   });
 
   router.get("/workspace", (req, res) => {
-    res.json({ workspace: getWorkspace(db) });
+    res.json({ workspace: getWorkspace(db, req.ledgerId) });
   });
 
   router.put("/workspace", (req, res) => {
-    res.json({ workspace: saveWorkspace(db, req.body) });
+    res.json({ workspace: saveWorkspace(db, req.ledgerId, req.body) });
   });
 
   return router;

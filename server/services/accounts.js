@@ -6,6 +6,7 @@ import { transaction } from "../db/connection.js";
 function mapAccount(row) {
   return {
     id: row.id,
+    ledgerId: row.ledger_id,
     code: row.code,
     name: row.name,
     category: row.category,
@@ -16,11 +17,13 @@ function mapAccount(row) {
   };
 }
 
-export function accountRows(db) {
-  return db.prepare("SELECT * FROM accounts ORDER BY code COLLATE NOCASE ASC").all();
+export function accountRows(db, ledgerId) {
+  return db
+    .prepare("SELECT * FROM accounts WHERE ledger_id = ? ORDER BY code COLLATE NOCASE ASC")
+    .all(ledgerId);
 }
 
-export function accountActivity(db) {
+export function accountActivity(db, ledgerId) {
   const rows = db
     .prepare(`
       SELECT l.account_id,
@@ -28,16 +31,16 @@ export function accountActivity(db) {
              SUM(l.credit_cents) AS credit_cents
       FROM journal_lines l
       JOIN journal_entries e ON e.id = l.entry_id
-      WHERE e.status = 'POSTED'
+      WHERE e.ledger_id = ? AND e.status = 'POSTED'
       GROUP BY l.account_id
     `)
-    .all();
+    .all(ledgerId);
   return new Map(rows.map((row) => [row.account_id, row]));
 }
 
-export function listAccounts(db) {
-  const activity = accountActivity(db);
-  return accountRows(db).map((row) => {
+export function listAccounts(db, ledgerId) {
+  const activity = accountActivity(db, ledgerId);
+  return accountRows(db, ledgerId).map((row) => {
     const totals = activity.get(row.id) || { debit_cents: 0, credit_cents: 0 };
     const raw = Number(totals.debit_cents || 0) - Number(totals.credit_cents || 0);
     const debitNormal = row.category === "ASSET" || row.category === "EXPENSE";
@@ -51,15 +54,21 @@ export function listAccounts(db) {
   });
 }
 
-export function getAccount(db, id) {
-  const row = db.prepare("SELECT * FROM accounts WHERE id = ?").get(id);
+export function getAccount(db, ledgerId, id) {
+  const row = db
+    .prepare("SELECT * FROM accounts WHERE id = ? AND ledger_id = ?")
+    .get(id, ledgerId);
   return row ? mapAccount(row) : null;
 }
 
-function assertCodeAvailable(db, code, excludeId = null) {
+function assertCodeAvailable(db, ledgerId, code, excludeId = null) {
   const row = db
-    .prepare("SELECT id FROM accounts WHERE lower(code) = lower(?) AND (? IS NULL OR id <> ?)")
-    .get(code, excludeId, excludeId);
+    .prepare(`
+      SELECT id FROM accounts
+      WHERE ledger_id = ? AND lower(code) = lower(?)
+        AND (? IS NULL OR id <> ?)
+    `)
+    .get(ledgerId, code, excludeId, excludeId);
   if (row) {
     throw new ConflictError("That account code is already in use.", [
       { field: "code", message: "That account code is already in use." },
@@ -67,17 +76,19 @@ function assertCodeAvailable(db, code, excludeId = null) {
   }
 }
 
-export function createAccount(db, body) {
+export function createAccount(db, ledgerId, body) {
   const input = normalizeAccountInput(body);
   return transaction(db, () => {
-    assertCodeAvailable(db, input.code);
+    assertCodeAvailable(db, ledgerId, input.code);
     const id = `acct-${crypto.randomUUID()}`;
     const now = new Date().toISOString();
     db.prepare(`
-      INSERT INTO accounts (id, code, name, category, description, active, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO accounts (
+        id, ledger_id, code, name, category, description, active, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
+      ledgerId,
       input.code,
       input.name,
       input.category,
@@ -86,20 +97,22 @@ export function createAccount(db, body) {
       now,
       now,
     );
-    return getAccount(db, id);
+    return getAccount(db, ledgerId, id);
   });
 }
 
-export function updateAccount(db, id, body) {
+export function updateAccount(db, ledgerId, id, body) {
   const input = normalizeAccountInput(body);
   return transaction(db, () => {
-    const existing = db.prepare("SELECT * FROM accounts WHERE id = ?").get(id);
+    const existing = db
+      .prepare("SELECT * FROM accounts WHERE id = ? AND ledger_id = ?")
+      .get(id, ledgerId);
     if (!existing) throw new NotFoundError("The account was not found.");
-    assertCodeAvailable(db, input.code, id);
+    assertCodeAvailable(db, ledgerId, input.code, id);
     db.prepare(`
       UPDATE accounts
       SET code = ?, name = ?, category = ?, description = ?, active = ?, updated_at = ?
-      WHERE id = ?
+      WHERE id = ? AND ledger_id = ?
     `).run(
       input.code,
       input.name,
@@ -108,20 +121,24 @@ export function updateAccount(db, id, body) {
       input.active ? 1 : 0,
       new Date().toISOString(),
       id,
+      ledgerId,
     );
-    return getAccount(db, id);
+    return getAccount(db, ledgerId, id);
   });
 }
 
-export function setAccountActive(db, id, active) {
+export function setAccountActive(db, ledgerId, id, active) {
   return transaction(db, () => {
-    const existing = db.prepare("SELECT * FROM accounts WHERE id = ?").get(id);
+    const existing = db
+      .prepare("SELECT * FROM accounts WHERE id = ? AND ledger_id = ?")
+      .get(id, ledgerId);
     if (!existing) throw new NotFoundError("The account was not found.");
-    db.prepare("UPDATE accounts SET active = ?, updated_at = ? WHERE id = ?").run(
+    db.prepare("UPDATE accounts SET active = ?, updated_at = ? WHERE id = ? AND ledger_id = ?").run(
       active ? 1 : 0,
       new Date().toISOString(),
       id,
+      ledgerId,
     );
-    return getAccount(db, id);
+    return getAccount(db, ledgerId, id);
   });
 }

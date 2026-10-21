@@ -72,6 +72,7 @@ function mapLine(row) {
 function mapEntry(row, lines, reversedBy = null) {
   return {
     id: row.id,
+    ledgerId: row.ledger_id,
     entryNo: row.entry_no,
     sourceType: row.source_type,
     status: row.status,
@@ -92,8 +93,10 @@ function mapEntry(row, lines, reversedBy = null) {
   };
 }
 
-export function getEntry(db, id) {
-  const row = db.prepare("SELECT * FROM journal_entries WHERE id = ?").get(id);
+export function getEntry(db, ledgerId, id) {
+  const row = db
+    .prepare("SELECT * FROM journal_entries WHERE id = ? AND ledger_id = ?")
+    .get(id, ledgerId);
   if (!row) return null;
   const link = db
     .prepare("SELECT reversal_entry_id FROM reversal_links WHERE original_entry_id = ?")
@@ -101,17 +104,24 @@ export function getEntry(db, id) {
   return mapEntry(row, lineRows(db, id), link?.reversal_entry_id || null);
 }
 
-export function listEntries(db) {
+export function listEntries(db, ledgerId) {
   const rows = db
-    .prepare("SELECT * FROM journal_entries ORDER BY entry_date DESC, entry_no DESC")
-    .all();
+    .prepare(`
+      SELECT * FROM journal_entries
+      WHERE ledger_id = ?
+      ORDER BY entry_date DESC, entry_no DESC
+    `)
+    .all(ledgerId);
   const lines = db
     .prepare(`
-      SELECT id, entry_id, line_no, account_id, description, debit_cents, credit_cents
-      FROM journal_lines
-      ORDER BY entry_id, line_no
+      SELECT l.id, l.entry_id, l.line_no, l.account_id, l.description,
+             l.debit_cents, l.credit_cents
+      FROM journal_lines l
+      JOIN journal_entries e ON e.id = l.entry_id
+      WHERE e.ledger_id = ?
+      ORDER BY l.entry_id, l.line_no
     `)
-    .all();
+    .all(ledgerId);
   const linesByEntry = new Map();
   for (const line of lines) {
     const list = linesByEntry.get(line.entry_id) || [];
@@ -120,8 +130,13 @@ export function listEntries(db) {
   }
   const links = new Map(
     db
-      .prepare("SELECT original_entry_id, reversal_entry_id FROM reversal_links")
-      .all()
+      .prepare(`
+        SELECT rl.original_entry_id, rl.reversal_entry_id
+        FROM reversal_links rl
+        JOIN journal_entries e ON e.id = rl.original_entry_id
+        WHERE e.ledger_id = ?
+      `)
+      .all(ledgerId)
       .map((row) => [row.original_entry_id, row.reversal_entry_id]),
   );
   return rows.map((row) =>
@@ -146,8 +161,8 @@ function payloadFromRow(row, lines) {
   };
 }
 
-function ensureActiveAccounts(db) {
-  return accountRows(db).map((row) => ({
+function ensureActiveAccounts(db, ledgerId) {
+  return accountRows(db, ledgerId).map((row) => ({
     id: row.id,
     code: row.code,
     name: row.name,
@@ -155,18 +170,18 @@ function ensureActiveAccounts(db) {
   }));
 }
 
-export function createDraft(db, body, { clientRequestId } = {}) {
+export function createDraft(db, ledgerId, body, { clientRequestId } = {}) {
   const request = requestId(clientRequestId);
-  const accounts = ensureActiveAccounts(db);
+  const accounts = ensureActiveAccounts(db, ledgerId);
   const input = normalizeEntryInput(body, { forPost: false, accounts });
 
   return transaction(db, () => {
     if (request) {
       const existing = db
-        .prepare("SELECT id FROM journal_entries WHERE client_request_id = ?")
-        .get(request);
+        .prepare("SELECT id FROM journal_entries WHERE client_request_id = ? AND ledger_id = ?")
+        .get(request, ledgerId);
       if (existing) {
-        return { entry: getEntry(db, existing.id), idempotent: true };
+        return { entry: getEntry(db, ledgerId, existing.id), idempotent: true };
       }
     }
 
@@ -175,12 +190,13 @@ export function createDraft(db, body, { clientRequestId } = {}) {
     const entryNo = allocateEntryNo(db, input.sourceType);
     db.prepare(`
       INSERT INTO journal_entries (
-        id, entry_no, source_type, status, entry_date, memo, reference,
+        id, ledger_id, entry_no, source_type, status, entry_date, memo, reference,
         adjustment_type, adjustment_reason, client_request_id, version,
         created_at, updated_at, posted_at
-      ) VALUES (?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL)
+      ) VALUES (?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL)
     `).run(
       id,
+      ledgerId,
       entryNo,
       input.sourceType,
       input.date,
@@ -193,11 +209,11 @@ export function createDraft(db, body, { clientRequestId } = {}) {
       now,
     );
     insertLines(db, id, input.lines);
-    return { entry: getEntry(db, id), idempotent: false };
+    return { entry: getEntry(db, ledgerId, id), idempotent: false };
   });
 }
 
-export function updateDraft(db, id, body) {
+export function updateDraft(db, ledgerId, id, body) {
   const version = Number(body?.version);
   if (!Number.isInteger(version) || version < 1) {
     throw new ValidationError([
@@ -205,11 +221,13 @@ export function updateDraft(db, id, body) {
     ]);
   }
 
-  const accounts = ensureActiveAccounts(db);
+  const accounts = ensureActiveAccounts(db, ledgerId);
   const input = normalizeEntryInput(body, { forPost: false, accounts });
 
   return transaction(db, () => {
-    const existing = db.prepare("SELECT * FROM journal_entries WHERE id = ?").get(id);
+    const existing = db
+      .prepare("SELECT * FROM journal_entries WHERE id = ? AND ledger_id = ?")
+      .get(id, ledgerId);
     if (!existing) throw new NotFoundError("The draft was not found.");
     if (existing.status !== "DRAFT") {
       throw new ConflictError("Posted entries cannot be edited.", [
@@ -233,7 +251,7 @@ export function updateDraft(db, id, body) {
       UPDATE journal_entries
       SET entry_date = ?, memo = ?, reference = ?, adjustment_type = ?,
           adjustment_reason = ?, version = version + 1, updated_at = ?
-      WHERE id = ? AND status = 'DRAFT'
+      WHERE id = ? AND ledger_id = ? AND status = 'DRAFT'
     `).run(
       input.date,
       input.memo,
@@ -242,29 +260,34 @@ export function updateDraft(db, id, body) {
       input.adjustmentReason,
       now,
       id,
+      ledgerId,
     );
     insertLines(db, id, input.lines);
-    return getEntry(db, id);
+    return getEntry(db, ledgerId, id);
   });
 }
 
-export function deleteDraft(db, id) {
+export function deleteDraft(db, ledgerId, id) {
   return transaction(db, () => {
-    const existing = db.prepare("SELECT * FROM journal_entries WHERE id = ?").get(id);
+    const existing = db
+      .prepare("SELECT * FROM journal_entries WHERE id = ? AND ledger_id = ?")
+      .get(id, ledgerId);
     if (!existing) throw new NotFoundError("The draft was not found.");
     if (existing.status !== "DRAFT") {
       throw new ConflictError("Posted entries cannot be deleted.", [
         { field: "status", message: "Posted entries cannot be deleted." },
       ]);
     }
-    db.prepare("DELETE FROM journal_entries WHERE id = ?").run(id);
+    db.prepare("DELETE FROM journal_entries WHERE id = ? AND ledger_id = ?").run(id, ledgerId);
     return { id };
   });
 }
 
-export function postEntry(db, id) {
+export function postEntry(db, ledgerId, id) {
   return transaction(db, () => {
-    const row = db.prepare("SELECT * FROM journal_entries WHERE id = ?").get(id);
+    const row = db
+      .prepare("SELECT * FROM journal_entries WHERE id = ? AND ledger_id = ?")
+      .get(id, ledgerId);
     if (!row) throw new NotFoundError("The entry was not found.");
     if (row.status === "POSTED") {
       throw new ConflictError("This entry is already posted.", [
@@ -275,26 +298,26 @@ export function postEntry(db, id) {
     const lines = lineRows(db, id);
     normalizeEntryInput(payloadFromRow(row, lines), {
       forPost: true,
-      accounts: ensureActiveAccounts(db),
+      accounts: ensureActiveAccounts(db, ledgerId),
     });
 
     const now = new Date().toISOString();
     const result = db.prepare(`
       UPDATE journal_entries
       SET status = 'POSTED', posted_at = ?, updated_at = ?, version = version + 1
-      WHERE id = ? AND status = 'DRAFT' AND version = ?
-    `).run(now, now, id, row.version);
+      WHERE id = ? AND ledger_id = ? AND status = 'DRAFT' AND version = ?
+    `).run(now, now, id, ledgerId, row.version);
 
     if (result.changes !== 1) {
       throw new ConflictError("This entry changed in another request. Reload it and try again.", [
         { field: "version", message: "This entry changed in another request. Reload it and try again." },
       ]);
     }
-    return getEntry(db, id);
+    return getEntry(db, ledgerId, id);
   });
 }
 
-export function reverseEntry(db, id, body = {}) {
+export function reverseEntry(db, ledgerId, id, body = {}) {
   const reason = String(body?.reason ?? "").trim();
   const request = requestId(body?.clientRequestId);
   if (!reason) {
@@ -305,7 +328,9 @@ export function reverseEntry(db, id, body = {}) {
   }
 
   return transaction(db, () => {
-    const original = db.prepare("SELECT * FROM journal_entries WHERE id = ?").get(id);
+    const original = db
+      .prepare("SELECT * FROM journal_entries WHERE id = ? AND ledger_id = ?")
+      .get(id, ledgerId);
     if (!original) throw new NotFoundError("The entry was not found.");
     if (original.status !== "POSTED") {
       throw new ConflictError("Only posted entries can be reversed.", [
@@ -322,7 +347,7 @@ export function reverseEntry(db, id, body = {}) {
       .prepare("SELECT reversal_entry_id FROM reversal_links WHERE original_entry_id = ?")
       .get(id);
     if (existingLink) {
-      const existing = getEntry(db, existingLink.reversal_entry_id);
+      const existing = getEntry(db, ledgerId, existingLink.reversal_entry_id);
       if (request && existing?.clientRequestId === request) {
         return { entry: existing, idempotent: true };
       }
@@ -337,12 +362,13 @@ export function reverseEntry(db, id, body = {}) {
     const entryNo = allocateEntryNo(db, "GENERAL_JOURNAL");
     db.prepare(`
       INSERT INTO journal_entries (
-        id, entry_no, source_type, status, entry_date, memo, reference,
+        id, ledger_id, entry_no, source_type, status, entry_date, memo, reference,
         adjustment_type, adjustment_reason, client_request_id,
         reversal_of_entry_id, reversal_reason, version, created_at, updated_at, posted_at
-      ) VALUES (?, ?, 'GENERAL_JOURNAL', 'DRAFT', ?, ?, ?, NULL, NULL, ?, ?, ?, 1, ?, ?, NULL)
+      ) VALUES (?, ?, ?, 'GENERAL_JOURNAL', 'DRAFT', ?, ?, ?, NULL, NULL, ?, ?, ?, 1, ?, ?, NULL)
     `).run(
       reversalId,
+      ledgerId,
       entryNo,
       todayIso(),
       `Reversal of ${original.entry_no}: ${original.memo}`,
@@ -371,14 +397,14 @@ export function reverseEntry(db, id, body = {}) {
     db.prepare(`
       UPDATE journal_entries
       SET status = 'POSTED', posted_at = ?, updated_at = ?
-      WHERE id = ? AND status = 'DRAFT'
-    `).run(now, now, reversalId);
+      WHERE id = ? AND ledger_id = ? AND status = 'DRAFT'
+    `).run(now, now, reversalId, ledgerId);
 
     db.prepare(`
       INSERT INTO reversal_links (original_entry_id, reversal_entry_id, reason, created_at)
       VALUES (?, ?, ?, ?)
     `).run(id, reversalId, reason, now);
 
-    return { entry: getEntry(db, reversalId), idempotent: false };
+    return { entry: getEntry(db, ledgerId, reversalId), idempotent: false };
   });
 }

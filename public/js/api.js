@@ -1,7 +1,34 @@
+let csrfToken = null;
+let authFailureNotified = false;
+
+export function setCsrfToken(token) {
+  csrfToken = token || null;
+  if (csrfToken) authFailureNotified = false;
+}
+
+function queryString(params = {}) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") search.set(key, value);
+  }
+  const result = search.toString();
+  return result ? `?${result}` : "";
+}
+
 async function request(path, options = {}) {
-  const { method = "GET", body, headers = {}, idempotencyKey } = options;
+  const {
+    method = "GET",
+    body,
+    headers = {},
+    idempotencyKey,
+    skipAuthEvent = false,
+  } = options;
   const requestHeaders = { Accept: "application/json", ...headers };
-  const requestOptions = { method, headers: requestHeaders };
+  const requestOptions = {
+    method,
+    headers: requestHeaders,
+    credentials: "same-origin",
+  };
 
   if (body !== undefined) {
     requestHeaders["Content-Type"] = "application/json";
@@ -9,6 +36,9 @@ async function request(path, options = {}) {
   }
   if (idempotencyKey) {
     requestHeaders["Idempotency-Key"] = idempotencyKey;
+  }
+  if (csrfToken && !["GET", "HEAD", "OPTIONS"].includes(method)) {
+    requestHeaders["X-CSRF-Token"] = csrfToken;
   }
 
   const response = await fetch(path, requestOptions);
@@ -27,8 +57,14 @@ async function request(path, options = {}) {
     error.status = response.status;
     error.code = payload?.error?.code;
     error.details = Array.isArray(payload?.error?.details) ? payload.error.details : [];
+    if (response.status === 401 && !skipAuthEvent && !authFailureNotified) {
+      authFailureNotified = true;
+      window.dispatchEvent(new CustomEvent("ledgerline:unauthorized"));
+    }
     throw error;
   }
+
+  authFailureNotified = false;
   return payload;
 }
 
@@ -36,8 +72,20 @@ export const api = {
   bootstrap: () => request("/api/bootstrap"),
   health: () => request("/api/health"),
 
+  claim: (input) =>
+    request("/api/auth/claim", { method: "POST", body: input, skipAuthEvent: true }),
+  login: (input) =>
+    request("/api/auth/login", { method: "POST", body: input, skipAuthEvent: true }),
+  logout: () => request("/api/auth/logout", { method: "POST", body: {} }),
+  lock: () => request("/api/auth/lock", { method: "POST", body: {} }),
+
   saveProfile: (name) => request("/api/profile", { method: "PUT", body: { name } }),
   saveWorkspace: (workspace) => request("/api/workspace", { method: "PUT", body: workspace }),
+
+  listLedgers: () => request("/api/ledgers"),
+  createLedger: (ledger) => request("/api/ledgers", { method: "POST", body: ledger }),
+  switchLedger: (id) =>
+    request(`/api/ledgers/${encodeURIComponent(id)}/switch`, { method: "POST", body: {} }),
 
   listAccounts: () => request("/api/accounts"),
   createAccount: (account) => request("/api/accounts", { method: "POST", body: account }),
@@ -52,7 +100,8 @@ export const api = {
   updateEntry: (id, entry) =>
     request(`/api/entries/${encodeURIComponent(id)}`, { method: "PUT", body: entry }),
   deleteEntry: (id) => request(`/api/entries/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  postEntry: (id) => request(`/api/entries/${encodeURIComponent(id)}/post`, { method: "POST", body: {} }),
+  postEntry: (id) =>
+    request(`/api/entries/${encodeURIComponent(id)}/post`, { method: "POST", body: {} }),
   reverseEntry: (id, reason, idempotencyKey) =>
     request(`/api/entries/${encodeURIComponent(id)}/reverse`, {
       method: "POST",
@@ -61,5 +110,7 @@ export const api = {
     }),
 
   dashboard: () => request("/api/dashboard"),
-  trialBalance: () => request("/api/dashboard/trial-balance"),
+  trialBalance: (params) => request(`/api/reports/trial-balance${queryString(params)}`),
+  incomeStatement: (params) => request(`/api/reports/income-statement${queryString(params)}`),
+  balanceSheet: (params) => request(`/api/reports/balance-sheet${queryString(params)}`),
 };

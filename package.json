@@ -1,6 +1,6 @@
 {
   "name": "ledgerline",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Local-first accounting workspace with an Express API and SQLite persistence.",
@@ -8,6 +8,7 @@
     "dev": "bash scripts/dev.sh",
     "dev:ui": "bash scripts/dev.sh",
     "start": "node server/index.js",
+    "auth:reset-password": "node scripts/reset-password.mjs",
     "check": "node scripts/check.mjs",
     "test": "bash scripts/test.sh",
     "test:unit": "bash scripts/test-unit.sh",

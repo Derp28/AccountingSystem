@@ -19,21 +19,21 @@ export function accountRoutes(db) {
   const router = express.Router();
 
   router.get("/", (req, res) => {
-    res.json({ accounts: listAccounts(db) });
+    res.json({ accounts: listAccounts(db, req.ledgerId) });
   });
 
   router.post("/", (req, res) => {
-    res.status(201).json({ account: createAccount(db, req.body) });
+    res.status(201).json({ account: createAccount(db, req.ledgerId, req.body) });
   });
 
   router.get("/:id", (req, res) => {
-    const account = getAccount(db, checkedId(req.params.id));
+    const account = getAccount(db, req.ledgerId, checkedId(req.params.id));
     if (!account) throw new NotFoundError("The account was not found.");
     res.json({ account });
   });
 
   router.put("/:id", (req, res) => {
-    res.json({ account: updateAccount(db, checkedId(req.params.id), req.body) });
+    res.json({ account: updateAccount(db, req.ledgerId, checkedId(req.params.id), req.body) });
   });
 
   router.post("/:id/active", (req, res) => {
@@ -47,7 +47,7 @@ export function accountRoutes(db) {
       });
       return;
     }
-    res.json({ account: setAccountActive(db, checkedId(req.params.id), active) });
+    res.json({ account: setAccountActive(db, req.ledgerId, checkedId(req.params.id), active) });
   });
 
   return router;

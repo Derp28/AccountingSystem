@@ -1,16 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { ensureAuthenticated } from "./helpers.js";
 
 test("markup in user text is escaped and never executed", async ({ page }) => {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  await page.goto("/");
-  if (await page.locator("#profile-name").isVisible().catch(() => false)) {
-    await page.locator("#profile-name").fill("Security Studio");
-    await page.getByRole("button", { name: /Continue to workspace/i }).click();
-    await page.locator("#setup-workspace-name").fill("Security Books");
-    await page.locator("#setup-currency").fill("USD");
-    await page.getByRole("button", { name: /Open workspace/i }).click();
-  }
+
+  await ensureAuthenticated(page);
 
   await page.getByRole("link", { name: "Chart of Accounts", exact: true }).click();
   await page.getByRole("button", { name: /Add account/i }).first().click();

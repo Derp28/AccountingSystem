@@ -4,8 +4,8 @@
 
 meta:
   project: Ledgerline accounting app
-  phase: Final signoff complete — Stage 2 local accounting app (Gate 3 passed; D-021 account-code change applied)
-  updated: 2026-10-20
+  phase: Stage 3 implemented — local access, multiple ledgers, reports, and self-hosted distribution (awaiting user UI review)
+  updated: 2026-10-21
 
 tasks:
   - id: T-001
@@ -308,6 +308,136 @@ tasks:
     status: done
     verification: "D-021 implemented after final signoff: seeds renumbered to 100–103, 200–201, 300, 400, 500–501 via migration 004; new-account code prefills the next unused category code and stays editable. Live database at schema 4 with no data loss; 138/138 static, 30/30 backend, 5/5 E2E."
 
+  - id: T-401
+    title: Local auth and multi-ledger schema (migration 005)
+    owner: Backend/Accounting Agent
+    phase: 4
+    requirements: [AUTH-001, AUTH-002, DB-004, DB-011, DB-012, DB-013]
+    depends_on: [T-305]
+    files: [migrations/005_local_auth_multi_ledger.sql, server/lib/seed-accounts.js]
+    status: done
+    verification: "Migration creates users/ledgers/sessions, adds ledger_id columns and scoped indexes, assigns existing rows to ledger-default, and adds isolation plus single-user triggers. Applied to a fresh test database; the live data/accounting.sqlite (schema 4) was backed up to data/backups/pre-005-20261021/ before upgrade."
+
+  - id: T-402
+    title: Auth service and middleware
+    owner: Backend/Accounting Agent
+    phase: 4
+    requirements: [AUTH-002, AUTH-004, AUTH-005, AUTH-006]
+    depends_on: [T-401]
+    files: [server/services/auth.js, server/middleware/auth.js, server/routes/auth.js, server/routes/index.js]
+    status: done
+    verification: "scrypt hashing with constant-time comparison, server-side sessions with idle/absolute expiry, lockout after five failures, CSRF header check, and session-revoking reset. Integration tests cover claim, login, lockout, and reset."
+
+  - id: T-403
+    title: Session cookie hardening
+    owner: Backend/Accounting Agent
+    phase: 4
+    requirements: [AUTH-004]
+    depends_on: [T-402]
+    files: [server/middleware/auth.js, .env.example]
+    status: done
+    verification: "ledgerline_session cookie is HttpOnly and SameSite=Strict, with Secure only when LEDGERLINE_SECURE_COOKIES=1. Static checks assert the cookie attributes."
+
+  - id: T-404
+    title: Protect routes behind auth and CSRF
+    owner: Backend/Accounting Agent
+    phase: 4
+    requirements: [AUTH-005, SEC-001]
+    depends_on: [T-402]
+    files: [server/routes/index.js]
+    status: done
+    verification: "Public auth/bootstrap endpoints precede requireAuth; all data routes require a session and mutations require a matching CSRF token. HTTP tests assert 401 and 403 responses."
+
+  - id: T-405
+    title: Offline password-reset CLI
+    owner: Backend/Accounting Agent
+    phase: 4
+    requirements: [AUTH-007]
+    depends_on: [T-402]
+    files: [scripts/reset-password.mjs, package.json]
+    status: done
+    verification: "npm run auth:reset-password resets a claimed account, revokes sessions, and exits non-zero for an unknown username. Verified end to end against a temporary database; supports hidden interactive entry, --password, and LEDGERLINE_NEW_PASSWORD."
+
+  - id: T-406
+    title: Multi-ledger service and switcher
+    owner: Backend/Accounting Agent + UI Agent
+    phase: 4
+    requirements: [LED-001, LED-002, UI-001]
+    depends_on: [T-401, T-402]
+    files: [server/services/auth.js, server/routes/ledgers.js, public/js/components/nav.js, public/js/components/setup.js, public/js/state.js]
+    status: done
+    verification: "Sidebar switcher, new-ledger modal, and ledger routes. E2E covers creating and switching ledgers; integration confirms a new ledger gets its own seeded chart."
+
+  - id: T-407
+    title: Ledger-scoped accounts, entries, and numbering
+    owner: Backend/Accounting Agent
+    phase: 4
+    requirements: [LED-003, DB-012]
+    depends_on: [T-406]
+    files: [server/services/accounts.js, server/services/entries.js, server/routes/accounts.js, server/routes/entries.js]
+    status: done
+    verification: "Every read/write is scoped by ledger_id; per-ledger unique codes; cross-ledger account references are rejected by service and triggers. Integration covers isolation."
+
+  - id: T-408
+    title: Reports service and page
+    owner: Backend/Accounting Agent + UI Agent
+    phase: 4
+    requirements: [REP-001, REP-002, REP-003, REP-004, REP-005]
+    depends_on: [T-407]
+    files: [server/services/reports.js, server/routes/reports.js, public/js/views/reports.js]
+    status: done
+    verification: "Trial balance (as-of, net, zero-hidden), income statement (period), and balance sheet (computed accumulated earnings) on an adjusted/unadjusted basis; drafts excluded; linked adjustment reversals excluded from unadjusted. Integration and E2E cover all three."
+
+  - id: T-409
+    title: Distribution packaging (Docker and docs)
+    owner: Orchestrator
+    phase: 4
+    requirements: [DIST-001, DIST-002, DIST-003, LED-004]
+    depends_on: [T-401]
+    files: [Dockerfile, docker-compose.yml, .dockerignore, .env.example, README.md]
+    status: done
+    verification: "Dockerfile pins Node 24, installs production dependencies, runs as the non-root node user, sets LEDGERLINE_CONTAINER=1, and declares a /app/data volume. Compose publishes the host port on 127.0.0.1 only. .dockerignore and .gitignore exclude data/ and .env."
+
+  - id: T-410
+    title: Release workflow
+    owner: Orchestrator
+    phase: 4
+    requirements: [DIST-001, DIST-002, QA-014]
+    depends_on: [T-409]
+    files: [.github/workflows/release.yml]
+    status: done
+    verification: "Tag-triggered workflow builds and pushes ghcr.io/<owner>/<repo> and creates a GitHub Release. Not executed in this environment; static checks verify its presence and configuration."
+
+  - id: T-411
+    title: Auth, lock, and ledger E2E
+    owner: QA Agent
+    phase: 4
+    requirements: [AUTH-001, AUTH-003, AUTH-007, LED-001, LED-002, QA-002, QA-007, QA-012]
+    depends_on: [T-406, T-407]
+    files: [tests/e2e/auth.spec.js, tests/e2e/helpers.js, tests/e2e/critical-path.spec.js, tests/e2e/xss.spec.js]
+    status: done
+    verification: "First-run claim validates input and creates the account; lock shows sign-in and rejects a wrong password; a second ledger is created and switched; the critical path and XSS specs run behind auth. 9/9 Playwright tests pass."
+
+  - id: T-412
+    title: Reports integration and E2E
+    owner: QA Agent
+    phase: 4
+    requirements: [REP-001, REP-002, REP-003, REP-004, REP-005, QA-006, QA-013]
+    depends_on: [T-408]
+    files: [tests/integration/reports.test.js, tests/integration/auth-ledgers.test.js, tests/e2e/reports.spec.js]
+    status: done
+    verification: "Integration proves basis exclusion, as-of/period filtering, balance-sheet balance, and invalid basis/date rejection; E2E toggles the basis and switches tabs. 38/38 backend tests pass."
+
+  - id: T-413
+    title: Stage 3 regression and documentation
+    owner: Orchestrator
+    phase: 4
+    requirements: [DB-013, DIST-002, QA-014]
+    depends_on: [T-411, T-412]
+    files: [scripts/check.mjs, REQUIREMENTS.md, DECISIONS.md, TASKS.yaml, TEST_PLAN.md, PLANS.md, UI_REVIEW.md, AGENTS.md]
+    status: done
+    verification: "182/182 static checks, 38/38 backend tests, 9/9 E2E tests, npm audit 0 vulnerabilities. Live database backed up before migration; data/ and .env remain git-ignored."
+
 gates:
   - id: GATE-0
     name: Discovery
@@ -325,3 +455,7 @@ gates:
     name: Final verification / later-stage scope
     status: passed
     evidence: "User accepted final product signoff for the current Stage 2 scope on 2026-10-20. Final verification: 30/30 backend tests, 5/5 E2E tests, 138/138 static checks, real restart, npm audit 0 vulnerabilities, live database migrated to schema 4 after the D-021 account-code change. No later-stage feature scope authorized."
+  - id: GATE-4
+    name: Stage 3 local access, multi-ledger, reports, and distribution
+    status: implemented_pending_ui_review
+    evidence: "Implementation and automated verification complete on 2026-10-21: 182/182 static checks, 38/38 backend tests (including a real restart with sessions), 9/9 Playwright tests, npm audit 0 vulnerabilities. Local auth with scrypt/sessions/CSRF/lockout, one account owning multiple ledgers with isolation triggers, and the three adjusted/unadjusted reports are implemented. Docker/release packaging and docs added. The Stage 3 UI has NOT yet been reviewed or approved by the user, and migration 005 has NOT yet been applied to the live database."

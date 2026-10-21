@@ -1,13 +1,14 @@
 import { renderMobileBar, mountNav, renderSidebar } from "./components/nav.js";
-import { openSettingsModal } from "./components/setup.js";
-import { getState, subscribe } from "./state.js";
+import { openNewLedgerModal, openSettingsModal } from "./components/setup.js";
+import { showToast } from "./components/toast.js";
+import { getState, lockNow, subscribe, switchLedger } from "./state.js";
 import { renderAccounts } from "./views/accounts.js";
 import { renderAdjustments } from "./views/adjustments.js";
+import { mountClaim, mountLogin, renderClaim, renderLogin } from "./views/auth.js";
 import { renderDashboard } from "./views/dashboard.js";
 import { renderJournal } from "./views/journal.js";
-import { mountOnboarding, renderOnboarding } from "./views/onboarding.js";
+import { renderReports } from "./views/reports.js";
 import { renderTransactions } from "./views/transactions.js";
-import { mountWorkspaceSetup, renderWorkspaceSetup } from "./views/workspace-setup.js";
 
 const ROUTES = {
   "/dashboard": { title: "Dashboard", render: renderDashboard },
@@ -15,11 +16,10 @@ const ROUTES = {
   "/transactions": { title: "Business Transactions", render: renderTransactions },
   "/journal": { title: "General Journal", render: renderJournal },
   "/adjustments": { title: "Adjustments", render: renderAdjustments },
+  "/reports": { title: "Reports", render: renderReports },
 };
 
 let lastRoute = null;
-let lastHadProfile = false;
-let lastHadWorkspace = false;
 
 export function getRoute() {
   const raw = window.location.hash.replace(/^#/, "");
@@ -41,7 +41,7 @@ function bannerHtml() {
     <div class="prototype-banner">
       <div class="banner-inner">
         <span class="prototype-pill">Local</span>
-        <p><strong>Saved locally.</strong> Changes are written to <code>data/accounting.sqlite</code> on this machine. Posted entries are immutable; corrections use reversals.</p>
+        <p><strong>Saved locally and locked.</strong> Changes are written to <code>data/accounting.sqlite</code> on this machine. The session locks after 30 idle minutes.</p>
         <button class="banner-reset" type="button" data-reset-prototype>Reload data</button>
       </div>
     </div>
@@ -63,13 +63,21 @@ function shellHtml(state, route) {
   `;
 }
 
-function onboardingHtml() {
+function authFrameHtml() {
   return `
     <div class="app-frame">
-      ${bannerHtml()}
-      <main id="main-content"></main>
+      <main id="main-content" class="auth-main"></main>
     </div>
   `;
+}
+
+async function handleSwitchLedger(ledgerId) {
+  const result = await switchLedger(ledgerId);
+  if (result.ok) {
+    showToast("Ledger switched", "Reports and entries now use the selected ledger.", "info");
+  } else {
+    showToast("Could not switch ledger", result.errors?.[0]?.message || "Try again.", "error");
+  }
 }
 
 export function renderApp() {
@@ -79,48 +87,49 @@ export function renderApp() {
   if (!app) return;
 
   document.body.style.overflow = "";
-  const hadProfile = lastHadProfile;
-  const hadWorkspace = lastHadWorkspace;
-  const onboarding = !state.profile;
-  const workspaceSetup = Boolean(state.profile) && !state.workspace;
+  const auth = state.auth || {};
 
-  if (onboarding || workspaceSetup) {
+  if (!auth.claimed) {
     window.scrollTo({ top: 0, behavior: "auto" });
+    app.innerHTML = authFrameHtml();
+    document.title = "Set up local account · Ledgerline";
+    const main = app.querySelector("#main-content");
+    main.innerHTML = renderClaim(state);
+    mountClaim(main);
+    lastRoute = null;
+    return;
   }
 
-  app.innerHTML = onboarding || workspaceSetup ? onboardingHtml() : shellHtml(state, route);
+  if (!auth.authenticated) {
+    window.scrollTo({ top: 0, behavior: "auto" });
+    app.innerHTML = authFrameHtml();
+    document.title = "Sign in · Ledgerline";
+    const main = app.querySelector("#main-content");
+    main.innerHTML = renderLogin(state);
+    mountLogin(main);
+    lastRoute = null;
+    return;
+  }
 
-  if (onboarding) {
-    document.title = "Welcome · Ledgerline";
-    const main = app.querySelector("#main-content");
-    main.innerHTML = renderOnboarding(state);
-    mountOnboarding(app);
-  } else if (workspaceSetup) {
-    document.title = "Workspace setup · Ledgerline";
-    const main = app.querySelector("#main-content");
-    main.innerHTML = renderWorkspaceSetup(state);
-    mountWorkspaceSetup(app);
-  } else {
-    document.title = `${ROUTES[route].title} · Ledgerline`;
-    mountNav(app, { onSettings: openSettingsModal });
-    const main = app.querySelector("#main-content");
-    ROUTES[route].render(main, state);
+  app.innerHTML = shellHtml(state, route);
+  document.title = `${ROUTES[route].title} · Ledgerline`;
+  mountNav(app, {
+    onSettings: openSettingsModal,
+    onSwitchLedger: handleSwitchLedger,
+    onNewLedger: openNewLedgerModal,
+    onLock: lockNow,
+  });
+  const main = app.querySelector("#main-content");
+  ROUTES[route].render(main, state);
 
-    const routeChanged = route !== lastRoute;
-    const justOnboarded = !hadProfile && Boolean(state.profile);
-    const justNamedWorkspace = !hadWorkspace && Boolean(state.workspace);
-    if ((routeChanged || justOnboarded || justNamedWorkspace) && state.workspace) {
-      const heading = main.querySelector(".page-title");
-      if (heading) {
-        heading.setAttribute("tabindex", "-1");
-        heading.focus({ preventScroll: true });
-      }
+  if (route !== lastRoute && state.workspace) {
+    const heading = main.querySelector(".page-title");
+    if (heading) {
+      heading.setAttribute("tabindex", "-1");
+      heading.focus({ preventScroll: true });
     }
   }
-
   lastRoute = route;
-  lastHadProfile = Boolean(state.profile);
-  lastHadWorkspace = Boolean(state.workspace);
 }
 
 export function startRouter() {

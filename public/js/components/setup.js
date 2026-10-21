@@ -1,7 +1,7 @@
 import { clearFieldErrors, escapeHtml, qs, setFieldError } from "../dom.js";
 import { icon } from "../icons.js";
 import { CURRENCY_OPTIONS } from "../mock-data.js";
-import { getState, updateSettings } from "../state.js";
+import { createLedger, getState, lockNow, logoutUser, updateSettings } from "../state.js";
 import { openModal } from "./modal.js";
 import { showToast } from "./toast.js";
 
@@ -58,6 +58,84 @@ function firstMessage(result, field) {
   return match?.message || result.errors?.[0]?.message || "The request failed.";
 }
 
+export function openNewLedgerModal() {
+  const content = `
+    <div class="modal-form">
+      <div class="field">
+        <label class="label" for="new-ledger-name">Ledger name <span class="required" aria-hidden="true">*</span></label>
+        <input class="input" id="new-ledger-name" type="text" maxlength="80" placeholder="e.g. Second business" data-autofocus />
+        ${fieldErrorHtml("new-ledger-name-error")}
+      </div>
+
+      <div class="field">
+        <label class="label" for="new-ledger-currency">Currency <span class="required" aria-hidden="true">*</span></label>
+        <input class="input" id="new-ledger-currency" type="text" list="currency-options" maxlength="3" value="${escapeHtml(
+          getState().workspace?.currency || "USD",
+        )}" autocomplete="off" />
+        ${currencyDatalist()}
+        ${fieldErrorHtml("new-ledger-currency-error")}
+      </div>
+
+      <div class="demo-note">
+        ${icon("info", 17)}
+        <span><strong>A separate ledger.</strong> It gets its own Chart of Accounts, journal entries, numbering, and reports. The existing ledger is not changed.</span>
+      </div>
+    </div>
+  `;
+
+  openModal({
+    title: "Create a ledger",
+    eyebrow: "Multiple ledgers",
+    description: "Add another set of books under this local account.",
+    size: "modal-narrow",
+    content,
+    footer: `
+      <button class="btn btn-secondary" type="button" data-cancel>Cancel</button>
+      <button class="btn btn-primary" type="button" data-create-ledger>Create ledger</button>
+    `,
+    onMount(dialog, close) {
+      const nameInput = qs("#new-ledger-name", dialog);
+      const currencyInput = qs("#new-ledger-currency", dialog);
+      const nameError = qs("#new-ledger-name-error", dialog);
+      const currencyErrorElement = qs("#new-ledger-currency-error", dialog);
+      const createButton = qs("[data-create-ledger]", dialog);
+
+      qs("[data-cancel]", dialog).addEventListener("click", close);
+      createButton.addEventListener("click", async () => {
+        clearFieldErrors(dialog);
+        const nameMessage = workspaceNameError(nameInput.value);
+        const currencyMessage = currencyError(currencyInput.value);
+        setFieldError(nameInput, nameError, nameMessage);
+        setFieldError(currencyInput, currencyErrorElement, currencyMessage);
+        if (nameMessage || currencyMessage) {
+          (nameMessage ? nameInput : currencyInput).focus();
+          return;
+        }
+
+        createButton.disabled = true;
+        createButton.innerHTML = `<span class="spinner" aria-hidden="true"></span> Creating…`;
+        const result = await createLedger({
+          name: nameInput.value,
+          currency: normalizeCurrency(currencyInput.value),
+        });
+        if (!result.ok) {
+          createButton.disabled = false;
+          createButton.textContent = "Create ledger";
+          if (result.errors.some((error) => error.field === "currency")) {
+            setFieldError(currencyInput, currencyErrorElement, firstMessage(result, "currency"));
+          } else {
+            setFieldError(nameInput, nameError, firstMessage(result, "name"));
+          }
+          return;
+        }
+        close();
+        window.location.hash = "#/dashboard";
+        showToast("Ledger created", "The new ledger is now active.", "success");
+      });
+    },
+  });
+}
+
 export function openSettingsModal() {
   const state = getState();
   if (!state.profile || !state.workspace) {
@@ -94,18 +172,22 @@ export function openSettingsModal() {
 
       <div class="demo-note">
         ${icon("info", 17)}
-        <span><strong>Saved locally.</strong> Changes are written to the SQLite database and kept after restart.</span>
+        <span><strong>Saved locally.</strong> Changes are written to the SQLite database and kept after restart. Signed in as <strong>${escapeHtml(
+          state.auth?.user?.username || "local user",
+        )}</strong>.</span>
       </div>
     </div>
   `;
 
   openModal({
     title: "Workspace settings",
-    eyebrow: "Profile and report",
-    description: "Rename the profile or workspace and change the display currency.",
+    eyebrow: "Profile and current ledger",
+    description: "Rename the profile or active ledger and change the display currency.",
     size: "modal-narrow",
     content,
     footer: `
+      <button class="btn btn-ghost" type="button" data-lock-now>Lock now</button>
+      <button class="btn btn-ghost" type="button" data-sign-out>Sign out</button>
       <button class="btn btn-secondary" type="button" data-cancel>Cancel</button>
       <button class="btn btn-primary" type="button" data-save-settings>Save changes</button>
     `,
@@ -119,6 +201,18 @@ export function openSettingsModal() {
       const saveButton = qs("[data-save-settings]", dialog);
 
       qs("[data-cancel]", dialog).addEventListener("click", close);
+
+      qs("[data-lock-now]", dialog).addEventListener("click", async () => {
+        close();
+        await lockNow();
+        showToast("Locked", "Sign in again to continue.", "info");
+      });
+
+      qs("[data-sign-out]", dialog).addEventListener("click", async () => {
+        close();
+        await logoutUser();
+        showToast("Signed out", "The local session was ended.", "info");
+      });
 
       saveButton.addEventListener("click", async () => {
         clearFieldErrors(dialog);

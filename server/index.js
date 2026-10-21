@@ -14,9 +14,16 @@ const dbPath = path.isAbsolute(configuredPath)
   ? configuredPath
   : path.resolve(projectRoot, configuredPath);
 
-if (!["127.0.0.1", "localhost", "::1"].includes(host)) {
+const loopbackHosts = ["127.0.0.1", "localhost", "::1"];
+const containerBind = process.env.LEDGERLINE_CONTAINER === "1";
+if (!loopbackHosts.includes(host) && !(containerBind && host === "0.0.0.0")) {
   console.error(`Refusing to start on ${host}: Ledgerline is a loopback-only local app.`);
   process.exit(1);
+}
+if (host === "0.0.0.0") {
+  console.warn(
+    "Container mode is binding 0.0.0.0 inside the container. Publish the port only on the host loopback interface.",
+  );
 }
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   console.error("PORT must be an integer between 1 and 65535.");
