@@ -1,8 +1,15 @@
 # Ledgerline
 
 A local-first accounting workspace. Ledgerline runs entirely on your own machine:
-an Express API, a single SQLite file, and a browser UI. There is no public
-hosting, no telemetry, and no account on a remote server.
+an Express API, a single SQLite file, and a browser UI. There is no telemetry and
+no account on a remote server.
+
+**Try the interactive demo:** <https://derp28.github.io/AccountingSystem/>
+
+The demo runs the same UI and the same validation rules in your browser. It is a
+demonstration only: the sample books are generated from a real database, but
+everything you change lives in the browser tab and disappears when you reload.
+Nothing is saved and no request leaves the page.
 
 ## What is included
 
@@ -20,6 +27,27 @@ Adjusted reports include every posted entry. Unadjusted reports exclude
 adjustment entries and the reversals linked to adjustments. Drafts are never
 included, zero-balance accounts are hidden, and money is stored as integer
 cents.
+
+## Interactive demo
+
+`npm run demo:build` writes a static copy of the app to `docs/`, which
+`.github/workflows/pages.yml` publishes to GitHub Pages on every push to `main`.
+The build:
+
+1. Replays a set of sample books through the real services and a real SQLite
+   database (claim, drafts, postings, an adjustment, a reversal, a second
+   ledger) and serializes them to `demo/seed.js`.
+2. Copies the untouched `public/` UI to `docs/` and points it at `demo/main.js`,
+   which answers `/api/*` from `demo/api.js` instead of the network.
+
+`demo/api.js` imports the server's own `server/lib/validation.js`, so amounts,
+dates, account-code ranges, and posting rules cannot drift from the shipped app.
+The demo keeps everything in memory: reloading restores the sample books, and the
+sign-in screen accepts any password because no credential is checked.
+
+GitHub Pages is static hosting, so the demo cannot run Express or SQLite. The
+sentences in the demo that would otherwise claim local persistence are rewritten
+by the build script, and the build fails if that wording changes.
 
 ## Requirements
 
@@ -46,9 +74,28 @@ Other commands:
 npm run dev                 # same as npm start
 npm run check               # static, schema, and data checks
 npm test                    # unit and integration tests
+npm run test:unit           # unit tests only
 npm run test:e2e            # Playwright browser tests
 npm run auth:reset-password -- <username>
+npm run demo:build          # rebuild the static demo site in docs/
 ```
+
+Every command works the same in PowerShell, a POSIX shell, WSL, and CI: the
+`npm` scripts call cross-platform Node entry points in `scripts/`, which resolve
+the project root from their own location. The `scripts/*.sh` files are thin
+wrappers that delegate to those entry points for Linux/WSL/CI use. Playwright
+needs its browser once: `npx playwright install chromium`.
+
+### Windows
+
+Run the commands above from the project folder with Node.js 24 or newer. Paths
+with spaces (including this repository's default location) need no special
+handling. Two platform notes, also recorded in `AGENTS.md`:
+
+- A terminated server reports `signalCode` instead of `exitCode`, so tooling must
+  treat either as "exited".
+- `fs.chmod` only toggles the read-only attribute on Windows; NTFS ACLs, not the
+  POSIX `0600` mode, protect the SQLite file.
 
 ## Run with Docker
 

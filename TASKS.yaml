@@ -4,8 +4,8 @@
 
 meta:
   project: Ledgerline accounting app
-  phase: Stage 3 implemented — local access, multiple ledgers, reports, and self-hosted distribution (awaiting user UI review)
-  updated: 2026-10-21
+  phase: Stage 3 implemented — local access, multiple ledgers, reports, and self-hosted distribution (awaiting user UI review); runtime localized to this folder on 2026-10-24
+  updated: 2026-10-24
 
 tasks:
   - id: T-001
@@ -438,6 +438,26 @@ tasks:
     status: done
     verification: "182/182 static checks, 38/38 backend tests, 9/9 E2E tests, npm audit 0 vulnerabilities. Live database backed up before migration; data/ and .env remain git-ignored."
 
+  - id: T-414
+    title: Localize the runtime to this project folder (Windows-native scripts)
+    owner: Orchestrator
+    phase: 4
+    requirements: [QA-001, QA-010, QA-011]
+    depends_on: [T-413]
+    files: [package.json, playwright.config.js, scripts/lib/runner.mjs, scripts/lib/test-files.mjs, scripts/dev.mjs, scripts/test.mjs, scripts/test-unit.mjs, scripts/test-e2e.mjs, scripts/e2e-server.mjs, scripts/dev.sh, scripts/test.sh, scripts/test-unit.sh, scripts/test-e2e.sh, tests/helpers/test-db.js, tests/integration/restart.test.js, AGENTS.md, README.md, DECISIONS.md]
+    status: done
+    verification: "Runtime localized to this folder with Windows Node 24.15.0 and no WSL/NVM dependency. npm scripts now call cross-platform Node entry points; the bash scripts are 12-line delegators for Linux/WSL/CI; Playwright's webServer uses scripts/e2e-server.mjs instead of rm && bash. Windows fixes: test DB cleanup tracks the reopened handle and retries removal (EPERM); restart.test.js treats signalCode as exited and skips the POSIX 0600 assertion on win32. Also patched the transitive body-parser 2.3.0 -> 2.4.0 advisory (GHSA-27r3-jxmh-p828) within Express's existing range. Executed in this folder on 2026-10-24, twice (before and after the dependency patch): 189/189 static checks, 38/38 backend tests (6.6s), 9/9 Playwright tests (29.0s) with Chromium 156 installed locally, npm audit 0 vulnerabilities. The live data/accounting.sqlite was not opened or migrated."
+
+  - id: T-415
+    title: Publish the project to GitHub with a static interactive demo (GitHub Pages)
+    owner: Orchestrator
+    phase: 5
+    requirements: [DIST-002, QA-014, REP-001, REP-002, REP-003, ACC-004]
+    depends_on: [T-414]
+    files: [demo/api.js, demo/main.js, demo/demo.css, demo/seed.js, scripts/build-demo.mjs, .github/workflows/pages.yml, .gitignore, package.json, scripts/check.mjs, AGENTS.md, README.md, DECISIONS.md]
+    status: done
+    verification: "Demo built by replaying sample books through the real services and SQLite, then serving the untouched public/ UI against an in-memory engine that imports server/lib/validation.js. Executed in this folder on 2026-10-24: npm run demo:build wrote 43 static files; npm run check 206/206 (adds demo file, import, seed-balance, no-browser-storage, and workflow checks); npm test 38/38; npm run test:e2e 9/9; npm audit 0 vulnerabilities. Browser walkthrough of docs/ served over http://127.0.0.1:4173: dashboard totals, all three reports with adjusted and unadjusted bases (unadjusted correctly drops ADJ-000006), draft -> post (SI-000010) -> reversal (JE-000011), ledger creation and switching, lock and sign-in with any password, zero /api/ network requests, no application console errors."
+
 gates:
   - id: GATE-0
     name: Discovery
@@ -458,4 +478,8 @@ gates:
   - id: GATE-4
     name: Stage 3 local access, multi-ledger, reports, and distribution
     status: implemented_pending_ui_review
-    evidence: "Implementation and automated verification complete on 2026-10-21: 182/182 static checks, 38/38 backend tests (including a real restart with sessions), 9/9 Playwright tests, npm audit 0 vulnerabilities. Local auth with scrypt/sessions/CSRF/lockout, one account owning multiple ledgers with isolation triggers, and the three adjusted/unadjusted reports are implemented. Docker/release packaging and docs added. The Stage 3 UI has NOT yet been reviewed or approved by the user, and migration 005 has NOT yet been applied to the live database."
+    evidence: "Implementation and automated verification complete on 2026-10-21: 182/182 static checks, 38/38 backend tests (including a real restart with sessions), 9/9 Playwright tests, npm audit 0 vulnerabilities. Local auth with scrypt/sessions/CSRF/lockout, one account owning multiple ledgers with isolation triggers, and the three adjusted/unadjusted reports are implemented. Docker/release packaging and docs added. On 2026-10-24 the runtime was localized to this folder (D-032) and re-verified: 189/189 static checks, 38/38 backend tests, 9/9 Playwright tests, npm audit 0 after patching body-parser to 2.4.0 (D-033). The Stage 3 UI has NOT yet been reviewed or approved by the user, and migration 005 has NOT yet been applied to the live database."
+  - id: GATE-5
+    name: Public interactive demo on GitHub Pages
+    status: implemented_pending_deploy
+    evidence: "On 2026-10-24 the project was pushed to https://github.com/Derp28/AccountingSystem and a static demo was added for GitHub Pages (D-034). Build: scripts/build-demo.mjs, which seeds a temporary SQLite database through the real claim/draft/post/adjust/reverse services and copies the untouched public/ UI next to an in-memory API engine. Verification: 206/206 static checks, 38/38 backend tests, 9/9 Playwright tests, npm audit 0, plus a browser walkthrough of the built site (dashboard, three reports in both bases, draft -> post -> reversal, ledger create/switch, lock and sign-in). The demo makes no persistence claims: the build rewrites those sentences and fails if the source wording changes. Deployment itself is verified by the first 'Demo site' workflow run."

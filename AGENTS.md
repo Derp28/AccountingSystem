@@ -6,7 +6,7 @@
 |---|---|---|
 | Orchestrator | Dependencies, phase gates, integration, reporting | `AGENTS.md`, `PLANS.md`, `TASKS.yaml`, `DECISIONS.md` |
 | Requirements Auditor | Coverage and ambiguity review | `REQUIREMENTS.md` (review), read-only elsewhere |
-| UI Agent | Approved screens and client interactions | `public/**`, `scripts/**` |
+| UI Agent | Approved screens and client interactions | `public/**`, `demo/**`, `scripts/build-demo.mjs` |
 | Backend/Accounting Agent | Persistence and accounting rules | `server/**`, `migrations/**`, `package.json` (with Orchestrator coordination) |
 | QA Agent | Tests and evidence | `tests/**`, `TEST_PLAN.md`, `screenshots/**` |
 
@@ -25,14 +25,17 @@
 
 ## Runtime rules
 
-- Run the app from WSL Ubuntu, not Windows Node on the UNC path.
-- Node path: `/home/derp_28/.nvm/versions/node/v24.22.0/bin`.
-- Project path: `/home/derp_28/accounting-app`.
+- Run the app from this project folder with Node.js 24 or newer. The canonical local runtime is Windows Node in this folder; no WSL, NVM, or hard-coded home path is required.
+- Project path: `C:\Users\Chaz Vincent Aurin\Downloads\koreanbananachicken\I FUCKED UP FOLDER\accounting-app`. Paths with spaces are supported: every script resolves the project root from its own file location, never from the shell's working directory.
+- Commands: `npm start` / `npm run dev`, `npm run check`, `npm test`, `npm run test:unit`, `npm run test:e2e`, `npm run auth:reset-password -- <username>`, `npm run demo:build`.
 - App URL: `http://127.0.0.1:3000`; default database: `data/accounting.sqlite`.
-- E2E URL: `http://127.0.0.1:3100`; E2E database: `data/e2e.sqlite`.
+- Public demo: <https://derp28.github.io/AccountingSystem/>, built by `.github/workflows/pages.yml` on every push to `main`. `npm run demo:build` writes the static site to `docs/`, which is generated output and git-ignored. The demo runs the real UI against an in-memory engine (`demo/api.js`); it cannot persist data, resets on reload, and must say so.
+- E2E URL: `http://127.0.0.1:3100`; E2E database: `data/e2e.sqlite` (reset by `scripts/e2e-server.mjs` on every run).
 - The server binds loopback only and refuses non-loopback `HOST` values; container mode may bind `0.0.0.0` only when `LEDGERLINE_CONTAINER=1`, and the compose file publishes the host port on `127.0.0.1` only.
 - The running app is gated by a local username/password. Passwords are scrypt hashes; sessions are server-side with an `HttpOnly`, `SameSite=Strict` cookie; mutations require an `X-CSRF-Token` header; five failures lock the account for 15 minutes. There is no public registration or email recovery; use `npm run auth:reset-password -- <username>` (which revokes sessions) for recovery.
-- Playwright must be launched through `scripts/test-e2e.sh`, which sets the user-local browser library path.
+- The `scripts/*.sh` files are thin wrappers for Linux/WSL/CI that delegate to the cross-platform `scripts/*.mjs` entry points. Put behavior in the `.mjs` files so every platform stays in sync.
+- Playwright must be launched through `scripts/test-e2e.mjs` (or the `npm run test:e2e` wrapper). Install the browser once with `npx playwright install chromium`; Linux hosts without sudo may unpack the shared libraries with `scripts/setup-local-browser-libs.sh`.
+- Windows has no POSIX signals: a killed server exits with `signalCode` set and `exitCode` null, and `fs.chmod` only toggles the read-only bit. Tests must not assume POSIX signals or `0600` file modes.
 - Back up the database only while the server is stopped; copy `data/accounting.sqlite` (and its WAL sidecars if present) to a safe location.
 
 ## Phase gates
@@ -44,6 +47,7 @@
 | G2 Accounting | Stage 2 posting, immutability, reversal, persistence, security, and tests pass. | Technical criteria passed; Stage 2 UI approved 2026-10-20; policies D-016, D-018, D-019, D-021 approved |
 | G3 Final | Product-wide final signoff and any later-stage scope. | Passed 2026-10-20 for current Stage 2 scope; later-stage scope authorized as Stage 3 |
 | G4 Stage 3 | Local access, multiple ledgers, reports, and distribution implemented and verified; UI approved by the user. | Implemented and automatically verified 2026-10-21; **UI approval pending** |
+| G5 Public demo | Static GitHub Pages demo builds from the real UI and services, carries no persistence claims, and deploys on push. | Implemented and verified locally 2026-10-24; deployment verified after the first Pages run |
 
 ## Definition of done
 
@@ -56,4 +60,4 @@ A task is DONE only when:
 
 ## Current phase
 
-**Stage 3 implemented — local access, multiple ledgers, reports, and self-hosted distribution (pending user UI review).** Stage 2 remains the approved accounting core. Stage 3 adds a local username/password gate (scrypt, server-side sessions, CSRF, lockout, offline reset), one local account owning multiple ledgers with database isolation triggers, and a Reports page with unadjusted/adjusted trial balance, income statement, and balance sheet. Distribution is source on GitHub plus self-hosted Docker/release copies, with no public hosting. Automated verification: 182 static checks, 38 backend tests, 9 Playwright tests, `npm audit` 0 vulnerabilities. Migration 005 has not yet been applied to the live database (backed up to `data/backups/pre-005-20261021/`). Period close, exports, multi-currency, tax/VAT, and statutory rules remain deferred and unauthorized.
+**Stage 3 implemented — local access, multiple ledgers, reports, and self-hosted distribution (pending user UI review).** Stage 2 remains the approved accounting core. Stage 3 adds a local username/password gate (scrypt, server-side sessions, CSRF, lockout, offline reset), one local account owning multiple ledgers with database isolation triggers, and a Reports page with unadjusted/adjusted trial balance, income statement, and balance sheet. Distribution is source on GitHub plus self-hosted Docker/release copies, plus a static interactive demo on GitHub Pages (D-034) that cannot persist data and says so. The runtime is localized to this folder (D-032): Windows Node 24 with no WSL/NVM dependency, cross-platform `scripts/*.mjs` entry points, and bash wrappers for Linux/CI. Automated verification on 2026-10-24 in this folder: 206 static checks, 38 backend tests, 9 Playwright tests, `npm audit` 0 vulnerabilities, plus a browser walkthrough of the built demo (dashboard, three reports with both bases, draft → post → reversal, ledger creation and switching, lock and sign-in). Migration 005 has not yet been applied to the live database (backed up to `data/backups/pre-005-20261021/`). Period close, exports, multi-currency, tax/VAT, and statutory rules remain deferred and unauthorized.

@@ -92,11 +92,17 @@ const requiredFiles = [
   "migrations/004_sequential_seed_codes.sql",
   "migrations/005_local_auth_multi_ledger.sql",
   "scripts/reset-password.mjs",
+  "scripts/build-demo.mjs",
+  "demo/api.js",
+  "demo/main.js",
+  "demo/demo.css",
+  "demo/seed.js",
   "Dockerfile",
   "docker-compose.yml",
   ".env.example",
   "README.md",
   ".github/workflows/release.yml",
+  ".github/workflows/pages.yml",
   "tests/unit/money.test.js",
   "tests/unit/validation.test.js",
   "tests/integration/accounting.test.js",
@@ -124,6 +130,7 @@ for (const file of requiredFiles) {
 
 const jsFiles = [
   ...walk(path.join(projectDir, "public", "js")),
+  ...walk(path.join(projectDir, "demo")).filter((file) => file.endsWith(".js")),
   ...walk(path.join(projectDir, "server")),
   ...walk(path.join(projectDir, "tests")),
   ...walk(path.join(projectDir, "scripts")).filter((file) => file.endsWith(".mjs")),
@@ -495,6 +502,72 @@ if (scripts["auth:reset-password"]) {
   pass("package scripts expose the offline password reset command");
 } else {
   fail("package scripts are missing auth:reset-password");
+}
+
+// ---------------------------------------------------------------------------
+// GitHub Pages demo: generated books, no browser storage, shared validation.
+// ---------------------------------------------------------------------------
+const demoSeed = (await import("../demo/seed.js")).seed;
+const demoApi = readProject("demo/api.js");
+const demoMain = readProject("demo/main.js");
+const buildDemo = readProject("scripts/build-demo.mjs");
+const pagesWorkflow = readProject(".github/workflows/pages.yml");
+
+if (demoSeed.entries.length >= 8 && demoSeed.ledgers.length >= 2 && demoSeed.accounts.length >= 10) {
+  pass(
+    `demo seed carries ${demoSeed.entries.length} entries, ${demoSeed.ledgers.length} ledgers, and ${demoSeed.accounts.length} accounts`,
+  );
+} else {
+  fail("demo seed is too small to demonstrate the app; rerun npm run demo:build");
+}
+
+const unbalancedSeed = demoSeed.entries.filter(
+  (entry) =>
+    entry.status === "POSTED" &&
+    (entryTotalDebit(entry) !== entryTotalCredit(entry) || entryTotalDebit(entry) === 0),
+);
+if (unbalancedSeed.length === 0) {
+  pass("every posted demo entry is balanced");
+} else {
+  fail(`unbalanced posted demo entries: ${unbalancedSeed.map((entry) => entry.entryNo).join(", ")}`);
+}
+
+const demoPostSeed = demoSeed.entries.filter((entry) => entry.status === "DRAFT");
+if (demoPostSeed.length > 0 && demoSeed.entries.some((entry) => entry.reversedBy)) {
+  pass("demo seed demonstrates a draft entry and a reversal");
+} else {
+  fail("demo seed no longer demonstrates drafts and reversals");
+}
+
+if (demoApi.includes('"../server/lib/validation.js"') && buildDemo.includes('"validation.js"')) {
+  pass("demo posting rules import the server's own validation module");
+} else {
+  fail("demo api must import ../server/lib/validation.js so posting rules cannot drift");
+}
+
+const demoStorageHits = [demoApi, demoMain].filter((source) =>
+  /\b(localStorage|sessionStorage|indexedDB|document\.cookie)\b/.test(source),
+);
+if (demoStorageHits.length === 0) {
+  pass("demo keeps state in memory only (no browser storage APIs)");
+} else {
+  fail("demo references browser storage; the demo must reset on reload");
+}
+
+if (
+  /scripts\/build-demo\.mjs/.test(pagesWorkflow) &&
+  /actions\/deploy-pages@v4/.test(pagesWorkflow) &&
+  /path:\s*docs/.test(pagesWorkflow)
+) {
+  pass("Pages workflow builds the demo and deploys docs/");
+} else {
+  fail("Pages workflow does not build scripts/build-demo.mjs or deploy docs/");
+}
+
+if (scripts["demo:build"]) {
+  pass("package scripts expose demo:build");
+} else {
+  fail("package scripts are missing demo:build");
 }
 
 console.log("Ledgerline local accounting app static, schema, and data checks");

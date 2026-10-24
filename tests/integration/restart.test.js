@@ -50,11 +50,25 @@ async function waitForServer(base) {
   throw new Error("The child server did not become healthy in time.");
 }
 
+function hasExited(child) {
+  // On POSIX a process killed by a signal reports signalCode, not exitCode.
+  // Windows maps kill() to TerminateProcess, which also reports a signal.
+  return child.exitCode !== null || child.signalCode !== null;
+}
+
 async function stopServer(child) {
-  if (child.exitCode !== null) return;
-  child.kill("SIGTERM");
-  await Promise.race([once(child, "exit"), delay(5000).then(() => child.kill("SIGKILL"))]);
-  if (child.exitCode === null) await once(child, "exit");
+  if (hasExited(child)) return;
+  // Windows has no POSIX signals: kill() terminates the process immediately, so
+  // the graceful shutdown handler does not run there. The WAL journal still makes
+  // the reopened database consistent, which is what this test verifies.
+  // The exit listener is attached before the kill so a fast exit cannot be missed.
+  const exited = once(child, "exit");
+  child.kill(process.platform === "win32" ? undefined : "SIGTERM");
+  const timeout = delay(5000).then(() => {
+    if (!hasExited(child)) child.kill("SIGKILL");
+  });
+  await Promise.race([exited, timeout]);
+  if (!hasExited(child)) await exited;
 }
 
 function cookieFrom(response) {
@@ -144,8 +158,12 @@ test("a real server restart preserves the local account, ledger, posted entries,
     await stopServer(child);
     child = null;
 
-    const mode = fs.statSync(dbPath).mode & 0o777;
-    assert.equal(mode, 0o600, "database file should be owner-readable/writable only");
+    // POSIX permissions only. On Windows fs.chmod only toggles the read-only
+    // attribute; access is governed by NTFS ACLs instead.
+    if (process.platform !== "win32") {
+      const mode = fs.statSync(dbPath).mode & 0o777;
+      assert.equal(mode, 0o600, "database file should be owner-readable/writable only");
+    }
 
     child = startServer(port, dbPath);
     await waitForServer(base);
@@ -172,6 +190,7 @@ test("a real server restart preserves the local account, ledger, posted entries,
     assert.ok(cookieFrom(login).startsWith("ledgerline_session="));
   } finally {
     if (child) await stopServer(child);
-    fs.rmSync(directory, { recursive: true, force: true });
+    // Windows keeps the SQLite handle briefly after the child exits.
+    fs.rmSync(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });

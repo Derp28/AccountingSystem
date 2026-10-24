@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Local development server. Runs inside WSL with the project's NVM Node.
+# Thin wrapper for Linux/WSL/CI shells. All logic lives in scripts/dev.mjs so
+# Windows, WSL, and Docker run exactly the same code.
 set -euo pipefail
 
-NODE_BIN="$HOME/.nvm/versions/node/v24.22.0/bin"
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# On WSL the project Node is installed with NVM and may not be on PATH.
+NODE_BIN="${LEDGERLINE_NODE_BIN:-$HOME/.nvm/versions/node/v24.22.0/bin}"
 if [ -x "$NODE_BIN/node" ]; then
   export PATH="$NODE_BIN:$PATH"
 fi
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$PROJECT_DIR"
-
-exec node server/index.js "$@"
+exec node scripts/dev.mjs "$@"

@@ -5,14 +5,18 @@
   "type": "module",
   "description": "Local-first accounting workspace with an Express API and SQLite persistence.",
   "scripts": {
-    "dev": "bash scripts/dev.sh",
-    "dev:ui": "bash scripts/dev.sh",
+    "dev": "node scripts/dev.mjs",
+    "dev:ui": "node scripts/dev.mjs",
     "start": "node server/index.js",
     "auth:reset-password": "node scripts/reset-password.mjs",
     "check": "node scripts/check.mjs",
-    "test": "bash scripts/test.sh",
-    "test:unit": "bash scripts/test-unit.sh",
-    "test:e2e": "bash scripts/test-e2e.sh"
+    "demo:build": "node scripts/build-demo.mjs",
+    "test": "node scripts/test.mjs",
+    "test:unit": "node scripts/test-unit.mjs",
+    "test:e2e": "node scripts/test-e2e.mjs"
+  },
+  "engines": {
+    "node": ">=24.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1"

@@ -13,8 +13,9 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command:
-      "rm -f data/e2e.sqlite data/e2e.sqlite-wal data/e2e.sqlite-shm && ACCOUNTING_DB_PATH=data/e2e.sqlite PORT=3100 bash scripts/dev.sh",
+    // scripts/e2e-server.mjs resets data/e2e.sqlite and starts the real server
+    // on port 3100. Kept in Node so Windows, WSL, and CI use one command.
+    command: "node scripts/e2e-server.mjs",
     url: "http://127.0.0.1:3100/api/health",
     reuseExistingServer: false,
     timeout: 30_000,
