@@ -556,12 +556,12 @@ if (demoStorageHits.length === 0) {
 
 if (
   /scripts\/build-demo\.mjs/.test(pagesWorkflow) &&
-  /actions\/deploy-pages@v4/.test(pagesWorkflow) &&
-  /path:\s*docs/.test(pagesWorkflow)
+  /HEAD:gh-pages/.test(pagesWorkflow) &&
+  /path:\s*docs|cd docs/.test(pagesWorkflow)
 ) {
-  pass("Pages workflow builds the demo and deploys docs/");
+  pass("Pages workflow builds the demo and publishes docs/ to the gh-pages branch");
 } else {
-  fail("Pages workflow does not build scripts/build-demo.mjs or deploy docs/");
+  fail("Pages workflow does not build scripts/build-demo.mjs or publish docs/ to gh-pages");
 }
 
 if (scripts["demo:build"]) {

@@ -29,7 +29,7 @@
 - Project path: `C:\Users\Chaz Vincent Aurin\Downloads\koreanbananachicken\I FUCKED UP FOLDER\accounting-app`. Paths with spaces are supported: every script resolves the project root from its own file location, never from the shell's working directory.
 - Commands: `npm start` / `npm run dev`, `npm run check`, `npm test`, `npm run test:unit`, `npm run test:e2e`, `npm run auth:reset-password -- <username>`, `npm run demo:build`.
 - App URL: `http://127.0.0.1:3000`; default database: `data/accounting.sqlite`.
-- Public demo: <https://derp28.github.io/AccountingSystem/>, built by `.github/workflows/pages.yml` on every push to `main`. `npm run demo:build` writes the static site to `docs/`, which is generated output and git-ignored. The demo runs the real UI against an in-memory engine (`demo/api.js`); it cannot persist data, resets on reload, and must say so.
+- Public demo: <https://derp28.github.io/AccountingSystem/>, built by `.github/workflows/pages.yml` on every push to `main` and force-published to the `gh-pages` branch, which Pages serves. `npm run demo:build` writes the static site to `docs/`, which is generated output and git-ignored. The demo runs the real UI against an in-memory engine (`demo/api.js`); it cannot persist data, resets on reload, and must say so.
 - E2E URL: `http://127.0.0.1:3100`; E2E database: `data/e2e.sqlite` (reset by `scripts/e2e-server.mjs` on every run).
 - The server binds loopback only and refuses non-loopback `HOST` values; container mode may bind `0.0.0.0` only when `LEDGERLINE_CONTAINER=1`, and the compose file publishes the host port on `127.0.0.1` only.
 - The running app is gated by a local username/password. Passwords are scrypt hashes; sessions are server-side with an `HttpOnly`, `SameSite=Strict` cookie; mutations require an `X-CSRF-Token` header; five failures lock the account for 15 minutes. There is no public registration or email recovery; use `npm run auth:reset-password -- <username>` (which revokes sessions) for recovery.
@@ -47,7 +47,7 @@
 | G2 Accounting | Stage 2 posting, immutability, reversal, persistence, security, and tests pass. | Technical criteria passed; Stage 2 UI approved 2026-10-20; policies D-016, D-018, D-019, D-021 approved |
 | G3 Final | Product-wide final signoff and any later-stage scope. | Passed 2026-10-20 for current Stage 2 scope; later-stage scope authorized as Stage 3 |
 | G4 Stage 3 | Local access, multiple ledgers, reports, and distribution implemented and verified; UI approved by the user. | Implemented and automatically verified 2026-10-21; **UI approval pending** |
-| G5 Public demo | Static GitHub Pages demo builds from the real UI and services, carries no persistence claims, and deploys on push. | Implemented and verified locally 2026-10-24; deployment verified after the first Pages run |
+| G5 Public demo | Static GitHub Pages demo builds from the real UI and services, carries no persistence claims, and publishes on push. | Passed 2026-10-24: workflow publishes `docs/` to `gh-pages`; <https://derp28.github.io/AccountingSystem/> verified in a browser |
 
 ## Definition of done
 

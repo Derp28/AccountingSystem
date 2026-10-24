@@ -31,8 +31,8 @@ cents.
 ## Interactive demo
 
 `npm run demo:build` writes a static copy of the app to `docs/`, which
-`.github/workflows/pages.yml` publishes to GitHub Pages on every push to `main`.
-The build:
+`.github/workflows/pages.yml` publishes to the `gh-pages` branch (served by
+GitHub Pages) on every push to `main`. The build:
 
 1. Replays a set of sample books through the real services and a real SQLite
    database (claim, drafts, postings, an adjustment, a reversal, a second

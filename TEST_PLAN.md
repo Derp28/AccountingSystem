@@ -202,6 +202,9 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-10-24 | `npm run check` after the demo | PASS, 206/206 | New checks: demo files exist, `demo/*.js` parses and resolves imports, the seed has no unbalanced posted entry, the demo imports `server/lib/validation.js`, no browser-storage APIs, and the Pages workflow builds `docs/` |
 | 2026-10-24 | Browser walkthrough of the built demo (`http://127.0.0.1:4173`, static `docs/`) | PASS | Dashboard totals and the balanced trial balance; trial balance, income statement, and balance sheet in both bases (unadjusted drops ADJ-000006); draft SI-000010 -> posted -> reversal JE-000011; new ledger created and switching back restores the books; lock and sign-in with any password. Zero `/api/` network requests and no application console errors |
 | 2026-10-24 | `npm test` + `npm run test:e2e` after the demo | PASS, 38/38 and 9/9 | Re-ran the full suite on the same tree; no application code changed for the demo |
+| 2026-10-24 | First `Demo site` workflow run (commit 6938551) | FAIL at "Configure Pages" | `actions/configure-pages` with `enablement: true` cannot create the Pages site with the default `GITHUB_TOKEN` (no repository-admin rights); the build and upload steps succeeded |
+| 2026-10-24 | Push of a `gh-pages` branch with the built site | PASS, Pages enabled | `has_pages` became true after the push; GitHub enabled Pages on the branch deploy. The workflow was changed to publish `docs/` to `gh-pages` instead of `actions/deploy-pages` |
+| 2026-10-24 | Live site `https://derp28.github.io/AccountingSystem/` | PASS | Served over HTTPS from the project subpath: dashboard totals, reports page, and the unadjusted basis toggle work; no console warnings; zero `/api/` network requests (the fetch shim answers everything in the page) |
 
 ## Known limitations
 
