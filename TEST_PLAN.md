@@ -208,10 +208,11 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 
 | 2026-10-27 | Starter chart (D-035) | PASS, 17 accounts | Fresh disposable SQLite database: migrations plus claim produced 100 Cash through 503 Depreciation Expense - Office Equipment, every code inside the D-018 ranges, with 104 documented as a contra asset |
 | 2026-10-27 | Migration 006 guard | PASS | Disposable database migrated only through 005, one posted entry added, then 006 applied: the ledger kept its original 10 accounts and ids, proving posted history is not relabelled |
-| 2026-10-27 | `npm run check` after the chart change | PASS, 216/216 | Adds starter-chart checks: 17 accounts, category ranges, unique codes, contra-asset wording, migration 006 vs `DEFAULT_ACCOUNTS` agreement, and the empty-ledger guard |
+| 2026-10-27 | `npm run check` after the chart change | PASS, 217/217 | Adds starter-chart checks: 17 accounts, category ranges, unique codes, contra-asset wording, migration 006 vs `DEFAULT_ACCOUNTS` agreement, and the empty-ledger guard |
 | 2026-10-27 | `npm test` after the chart change | PASS, 38/38 | Fixtures and account counts realigned (17 seeded accounts, 18 after an added account); health reports schema 6 |
 | 2026-10-27 | `npm run test:e2e` after the chart change | PASS, 9/9 | E2E chart assertions use the new codes; the adjustment flow uses 500 Salaries Expense and 203 Salaries Payable |
-| 2026-10-27 | `npm run demo:build` after the chart change | PASS, 44 files | `demo/books.js` replayed through the real services: 10 entries, 2 ledgers, 34 accounts, profile AAA Computer Services, currency PHP; the sample transactions remain placeholders |
+| 2026-10-27 | `npm run demo:build` after the chart change | PASS, 44 files | `demo/books.js` replayed through the real services: 9 entries, 2 ledgers, 34 accounts, profile AAA Computer Services, currency PHP |
+| 2026-10-27 | Demo sample transactions | PASS, 9 entries, equation difference 0 | Owner's December 2023 set posted through the real services: assets 104,300.00 PHP, liabilities 7,500.00, equity 97,000.00, net loss 200.00; every entry balanced, no draft or reversal injected into the sample books |
 
 ## Known limitations
 
@@ -225,7 +226,7 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 - The GitHub release workflow was not executed here; its configuration is statically checked only.
 - The GitHub Pages demo cannot persist data: everything is in memory, resets on reload, and the sign-in screen accepts any password. Only the demo's wording is rewritten; the shipped app is unchanged.
 - Migrations 005 and 006 have not yet been applied to the live `data/accounting.sqlite` (schema 4); they apply on the next server start, after the pre-migration backup.
-- The demo's sample transactions are placeholders on the AAA Computer Services chart until the user supplies the real ones; the accounts themselves are final.
+- The demo's sample transactions are the owner's December 2023 set; the 11 December hiring agreement has no entry until payroll is recorded.
 - The Stage 3 UI has not yet been reviewed or approved by the user.
 - Account codes are constrained to three-digit category hundred-series ranges by D-018; out-of-range codes are rejected by the API, UI, and database triggers.
 - Reversals use the approved D-019 policy: server current UTC date and `GENERAL_JOURNAL` source type.

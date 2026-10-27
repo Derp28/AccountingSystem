@@ -3,10 +3,11 @@
  * through the real services and a real SQLite database, so the published demo
  * obeys the same posting, numbering, and reversal rules as the shipped app.
  *
- * PLACEHOLDER CONTENT: AAA Computer Services still has to supply its own sample
- * transactions. Until then these entries keep every posting path visible -
- * journal, bill, invoice, receipt, payment, adjustment, reversal, and draft -
- * on the starter Chart of Accounts in server/lib/seed-accounts.js.
+ * The transactions are the owner's December 2023 sample set for AAA Computer
+ * Services, recorded on the starter Chart of Accounts in
+ * server/lib/seed-accounts.js. The 11 December hiring agreement has no entry:
+ * agreeing to a salary does not move money or create a liability until payroll
+ * is recorded.
  *
  * Amounts are decimal strings in the ledger currency. They are parsed by the
  * server's own validation, so the demo cannot drift from the posting rules.
@@ -17,117 +18,108 @@ export const demoBooks = {
     username: "aaa_cs",
     password: "demo-only-account-password",
   },
-  main: { name: "General Ledger 2026", currency: "PHP" },
+  main: { name: "General Ledger 2023", currency: "PHP" },
   second: { name: "Branch books", currency: "PHP" },
   entries: [
     {
       sourceType: "GENERAL_JOURNAL",
-      date: "2026-10-02",
-      memo: "Owner investment - cash",
+      date: "2023-12-01",
+      memo: "Owner investment",
       reference: "ORD-001",
       status: "POSTED",
       lines: [
-        { code: "100", debit: "500000.00", description: "Cash contribution" },
-        { code: "300", credit: "500000.00", description: "Owner's capital" },
-      ],
-    },
-    {
-      sourceType: "PURCHASE_BILL",
-      date: "2026-10-03",
-      memo: "Office equipment - two workstations",
-      reference: "BILL-1001",
-      status: "POSTED",
-      lines: [
-        { code: "103", debit: "180000.00", description: "Workstations and monitors" },
-        { code: "200", credit: "180000.00", description: "Payable to the supplier" },
-      ],
-    },
-    {
-      sourceType: "SALES_INVOICE",
-      date: "2026-10-06",
-      memo: "Network setup - Dela Cruz Trading",
-      reference: "INV-2001",
-      status: "POSTED",
-      lines: [
-        { code: "101", debit: "85000.00", description: "Invoice total" },
-        { code: "400", credit: "85000.00", description: "Network setup and cabling" },
-      ],
-    },
-    {
-      sourceType: "CASH_RECEIPT",
-      date: "2026-10-09",
-      memo: "Payment - Dela Cruz Trading",
-      reference: "RCPT-3001",
-      status: "POSTED",
-      lines: [
-        { code: "100", debit: "85000.00", description: "Bank deposit" },
-        { code: "101", credit: "85000.00", description: "Applied to INV-2001" },
+        { code: "100", debit: "100000.00", description: "Cash contribution" },
+        { code: "300", credit: "100000.00", description: "Owner's capital" },
       ],
     },
     {
       sourceType: "CASH_PAYMENT",
-      date: "2026-10-15",
-      memo: "October salaries",
-      reference: "PAY-4001",
+      date: "2023-12-02",
+      memo: "Office equipment purchase",
+      reference: "VOU-001",
       status: "POSTED",
       lines: [
-        { code: "500", debit: "60000.00", description: "Salaries for October" },
-        { code: "100", credit: "60000.00", description: "Payroll transfer" },
+        { code: "103", debit: "15000.00", description: "Office equipment" },
+        { code: "100", credit: "15000.00", description: "Cash payment" },
       ],
     },
     {
-      sourceType: "PURCHASE_BILL",
-      date: "2026-10-20",
-      memo: "Printer paper and toner",
-      reference: "BILL-1002",
+      sourceType: "CASH_RECEIPT",
+      date: "2023-12-05",
+      memo: "Advance payment for computer services",
+      reference: "OR-001",
       status: "POSTED",
       lines: [
-        { code: "502", debit: "7500.00", description: "Supplies for the office" },
-        { code: "200", credit: "7500.00", description: "Payable to the supplier" },
-      ],
-    },
-    {
-      sourceType: "ADJUSTMENT",
-      date: "2026-10-27",
-      memo: "Accrue October salaries",
-      reference: "ADJ-2001",
-      status: "POSTED",
-      adjustmentType: "ACCRUED_EXPENSE",
-      adjustmentReason: "Payroll for the last week of October is still unpaid at month end.",
-      lines: [
-        { code: "500", debit: "12000.00", description: "Unpaid October salaries" },
-        { code: "203", credit: "12000.00", description: "Salaries payable" },
-      ],
-    },
-    {
-      sourceType: "ADJUSTMENT",
-      date: "2026-10-27",
-      memo: "Monthly depreciation - office equipment",
-      reference: "ADJ-2002",
-      status: "POSTED",
-      adjustmentType: "DEPRECIATION",
-      adjustmentReason: "Record one month of depreciation on office equipment.",
-      lines: [
-        { code: "503", debit: "3000.00", description: "October depreciation" },
-        { code: "104", credit: "3000.00", description: "Accumulated depreciation" },
+        { code: "100", debit: "2000.00", description: "Advance received" },
+        { code: "202", credit: "2000.00", description: "Unearned computer service revenue" },
       ],
     },
     {
       sourceType: "SALES_INVOICE",
-      date: "2026-10-26",
-      memo: "Maintenance retainer - November",
-      reference: "INV-2002",
-      status: "DRAFT",
+      date: "2023-12-06",
+      memo: "Computer services billed - BBB Client",
+      reference: "INV-001",
+      status: "POSTED",
       lines: [
-        { code: "101", debit: "40000.00", description: "November retainer" },
-        { code: "400", credit: "40000.00", description: "Monthly maintenance" },
+        { code: "101", debit: "3500.00", description: "Invoice total" },
+        { code: "400", credit: "3500.00", description: "Computer services" },
+      ],
+    },
+    {
+      sourceType: "CASH_RECEIPT",
+      date: "2023-12-07",
+      memo: "Collection from BBB Client",
+      reference: "OR-002",
+      status: "POSTED",
+      lines: [
+        { code: "100", debit: "1000.00", description: "Cash received" },
+        { code: "101", credit: "1000.00", description: "Applied to INV-001" },
+      ],
+    },
+    {
+      sourceType: "CASH_PAYMENT",
+      date: "2023-12-08",
+      memo: "Office supplies purchase",
+      reference: "VOU-002",
+      status: "POSTED",
+      lines: [
+        { code: "102", debit: "1500.00", description: "Office supplies on hand" },
+        { code: "100", credit: "1500.00", description: "Cash payment" },
+      ],
+    },
+    {
+      sourceType: "CASH_RECEIPT",
+      date: "2023-12-10",
+      memo: "Computer services for cash",
+      reference: "OR-003",
+      status: "POSTED",
+      lines: [
+        { code: "100", debit: "1800.00", description: "Cash received" },
+        { code: "400", credit: "1800.00", description: "Computer services" },
+      ],
+    },
+    {
+      sourceType: "PURCHASE_BILL",
+      date: "2023-12-12",
+      memo: "Advertising bill",
+      reference: "BILL-001",
+      status: "POSTED",
+      lines: [
+        { code: "501", debit: "5500.00", description: "Advertising services" },
+        { code: "204", credit: "5500.00", description: "Advertising payable" },
+      ],
+    },
+    {
+      sourceType: "GENERAL_JOURNAL",
+      date: "2023-12-15",
+      memo: "Owner withdrawal",
+      reference: "DWG-001",
+      status: "POSTED",
+      lines: [
+        { code: "301", debit: "3000.00", description: "Owner's withdrawal" },
+        { code: "100", credit: "3000.00", description: "Cash withdrawal" },
       ],
     },
   ],
-  reversals: [
-    {
-      reference: "BILL-1002",
-      reason: "The supplier billed the same delivery twice.",
-    },
-  ],
+  reversals: [],
 };

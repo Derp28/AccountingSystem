@@ -624,11 +624,16 @@ if (unbalancedSeed.length === 0) {
   fail(`unbalanced posted demo entries: ${unbalancedSeed.map((entry) => entry.entryNo).join(", ")}`);
 }
 
-const demoPostSeed = demoSeed.entries.filter((entry) => entry.status === "DRAFT");
-if (demoPostSeed.length > 0 && demoSeed.entries.some((entry) => entry.reversedBy)) {
-  pass("demo seed demonstrates a draft entry and a reversal");
+if (demoSeed.entries.every((entry) => entry.date.startsWith("2023-12"))) {
+  pass("demo sample transactions are the December 2023 set");
 } else {
-  fail("demo seed no longer demonstrates drafts and reversals");
+  fail("demo seed contains entries outside the December 2023 sample set");
+}
+
+if (/\bfunction postEntry\b/.test(demoApi) && /\bfunction reverseEntry\b/.test(demoApi)) {
+  pass("demo engine can post drafts and create reversals");
+} else {
+  fail("demo engine is missing the posting or reversal path");
 }
 
 if (demoApi.includes('"../server/lib/validation.js"') && buildDemo.includes('"validation.js"')) {
