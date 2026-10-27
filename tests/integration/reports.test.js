@@ -26,8 +26,8 @@ function adjustment(db, ledgerId, { date = "2026-10-20", amount = 50000 } = {}) 
     adjustmentType: "OTHER",
     adjustmentReason: "Rent used but not yet invoiced.",
     lines: [
-      { accountId: "acct-510", debitCents: amount, creditCents: 0 },
-      { accountId: "acct-210", debitCents: 0, creditCents: amount },
+      { accountId: "acct-501", debitCents: amount, creditCents: 0 },
+      { accountId: "acct-201", debitCents: 0, creditCents: amount },
     ],
   });
 }
@@ -38,7 +38,7 @@ function laterSale(db, ledgerId) {
     date: "2026-11-05",
     memo: "November invoice",
     lines: [
-      { accountId: "acct-110", debitCents: 100000, creditCents: 0 },
+      { accountId: "acct-101", debitCents: 100000, creditCents: 0 },
       { accountId: "acct-400", debitCents: 0, creditCents: 100000 },
     ],
   });

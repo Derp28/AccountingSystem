@@ -69,7 +69,7 @@ export const SOURCE_TYPES = {
     tone: "purchase",
     description: "A cost or asset acquired on credit.",
     defaultLines: [
-      { accountCode: "500", side: "debit" },
+      { accountCode: "502", side: "debit" },
       { accountCode: "200", side: "credit" },
     ],
   },

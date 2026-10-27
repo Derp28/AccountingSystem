@@ -43,7 +43,7 @@ test("first-run claim creates the local account, a ledger, and a session", async
 
     const user = getLocalUser(db);
     assert.equal(user.claimed, 1);
-    assert.equal(listAccounts(db, result.ledger.id).length, 10);
+    assert.equal(listAccounts(db, result.ledger.id).length, 17);
 
     const resolved = resolveSession(db, result.token);
     assert.equal(resolved.user.username, TEST_USERNAME);
@@ -112,7 +112,7 @@ test("ledgers are isolated for accounts, entries, numbering, and reports", () =>
     const auth = authFor(db, ledgerA);
     const ledgerB = createLedger(db, auth, { name: "Second Books", currency: "USD" });
 
-    assert.equal(listAccounts(db, ledgerB.id).length, 10, "new ledger gets its own seeded chart");
+    assert.equal(listAccounts(db, ledgerB.id).length, 17, "new ledger gets its own seeded chart");
 
     // Same human-readable code is allowed in each ledger.
     const codeA = createAccount(db, ledgerA, {

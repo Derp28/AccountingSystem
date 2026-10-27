@@ -12,16 +12,22 @@ test("critical path: COA, transaction, post, journal, adjustment, reversal, relo
   // Chart of accounts uses the approved hundreds series and survives a reload.
   await page.getByRole("link", { name: "Chart of Accounts", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Chart of Accounts" })).toBeVisible();
-  for (const code of ["100", "101", "102", "103", "200", "201", "300", "400", "500", "501"]) {
+  for (const code of [
+    "100", "101", "102", "103", "104",
+    "200", "201", "202", "203", "204",
+    "300", "301",
+    "400",
+    "500", "501", "502", "503",
+  ]) {
     await expect(page.locator(`[data-account-code="${code}"]`)).toBeVisible();
   }
 
   await page.getByRole("button", { name: /Add account/i }).first().click();
   let dialog = page.locator("dialog[open]");
-  await expect(dialog.locator("#account-code")).toHaveValue("104");
+  await expect(dialog.locator("#account-code")).toHaveValue("105");
   await dialog.locator("#account-name").fill("Software subscriptions");
   await dialog.locator("#account-category-input").selectOption("EXPENSE");
-  await expect(dialog.locator("#account-code")).toHaveValue("502");
+  await expect(dialog.locator("#account-code")).toHaveValue("504");
   await dialog.locator("#account-code").fill("520");
   await dialog.locator("#account-category-input").selectOption("ASSET");
   await dialog.getByRole("button", { name: "Add account", exact: true }).click();
@@ -66,21 +72,21 @@ test("critical path: COA, transaction, post, journal, adjustment, reversal, relo
   await page.getByRole("link", { name: "Adjustments", exact: true }).click();
   await page.getByRole("button", { name: /New adjustment/i }).first().click();
   dialog = page.locator("dialog[open]");
-  await dialog.locator("#entry-memo").fill("Accrue October rent");
+  await dialog.locator("#entry-memo").fill("Accrue October salaries");
   await dialog.locator("#entry-adjustment-type").selectOption("ACCRUED_EXPENSE");
-  await dialog.locator("#entry-adjustment-reason").fill("October rent not yet invoiced");
+  await dialog.locator("#entry-adjustment-reason").fill("October salaries not yet paid");
   const adjustmentRows = dialog.locator(".line-row");
   await expect(adjustmentRows).toHaveCount(2);
-  await adjustmentRows.nth(0).locator("[data-line-account]").selectOption("acct-510");
+  await adjustmentRows.nth(0).locator("[data-line-account]").selectOption("acct-500");
   await adjustmentRows.nth(0).locator("[data-line-debit]").fill("500.00");
-  await adjustmentRows.nth(1).locator("[data-line-account]").selectOption("acct-210");
+  await adjustmentRows.nth(1).locator("[data-line-account]").selectOption("acct-203");
   await adjustmentRows.nth(1).locator("[data-line-credit]").fill("500.00");
   await dialog.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Draft saved" }).last()).toBeVisible();
 
   await page
     .locator("[data-adjustment-card]")
-    .filter({ hasText: "Accrue October rent" })
+    .filter({ hasText: "Accrue October salaries" })
     .getByRole("button", { name: /Open/ })
     .click();
   await page.getByRole("button", { name: /Post entry/ }).click();
@@ -90,12 +96,12 @@ test("critical path: COA, transaction, post, journal, adjustment, reversal, relo
   // Reopen the adjustment and reverse it with a reason.
   await page
     .locator("[data-adjustment-card]")
-    .filter({ hasText: "Accrue October rent" })
+    .filter({ hasText: "Accrue October salaries" })
     .getByRole("button", { name: /Open/ })
     .click();
   await page.getByRole("button", { name: /Reverse entry/ }).click();
   dialog = page.locator("dialog[open]");
-  await dialog.locator("[data-reversal-reason]").fill("Rent was invoiced in November");
+  await dialog.locator("[data-reversal-reason]").fill("Salaries were paid in November");
   await dialog.getByRole("button", { name: /Create reversal/i }).click();
   await expect(page.getByText("Reversal created")).toBeVisible();
 
@@ -106,7 +112,7 @@ test("critical path: COA, transaction, post, journal, adjustment, reversal, relo
   await page.getByRole("link", { name: "General Journal", exact: true }).click();
   await expect(page.locator("[data-journal-row]").filter({ hasText: "E2E sale" })).toBeVisible();
   await expect(
-    page.locator('[data-journal-row][data-type="ADJUSTMENT"]').filter({ hasText: "Accrue October rent" }),
+    page.locator('[data-journal-row][data-type="ADJUSTMENT"]').filter({ hasText: "Accrue October salaries" }),
   ).toBeVisible();
   await expect(
     page.locator('[data-journal-row][data-type="GENERAL_JOURNAL"]').filter({ hasText: "Reversal of" }),

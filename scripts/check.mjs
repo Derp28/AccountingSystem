@@ -13,6 +13,7 @@ import {
   trialBalanceTotals,
 } from "../public/js/accounting.js";
 import { MOCK_ACCOUNTS, MOCK_ENTRIES } from "../public/js/mock-data.js";
+import { DEFAULT_ACCOUNTS } from "../server/lib/seed-accounts.js";
 
 const projectDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
@@ -91,8 +92,10 @@ const requiredFiles = [
   "migrations/003_account_code_ranges.sql",
   "migrations/004_sequential_seed_codes.sql",
   "migrations/005_local_auth_multi_ledger.sql",
+  "migrations/006_starter_chart.sql",
   "scripts/reset-password.mjs",
   "scripts/build-demo.mjs",
+  "demo/books.js",
   "demo/api.js",
   "demo/main.js",
   "demo/demo.css",
@@ -256,6 +259,89 @@ const seedSql = readProject("migrations/002_seed_accounts.sql");
 const accountRangeSql = readProject("migrations/003_account_code_ranges.sql");
 const sequentialSeedSql = readProject("migrations/004_sequential_seed_codes.sql");
 const authSql = readProject("migrations/005_local_auth_multi_ledger.sql");
+const starterChartSql = readProject("migrations/006_starter_chart.sql");
+
+// ---------------------------------------------------------------------------
+// Starter Chart of Accounts: the same chart seeds new ledgers and upgrades the
+// seeded ledger that migration 006 replaces while it still has no entries.
+// ---------------------------------------------------------------------------
+const starterRanges = {
+  ASSET: [100, 199],
+  LIABILITY: [200, 299],
+  EQUITY: [300, 399],
+  REVENUE: [400, 499],
+  EXPENSE: [500, 599],
+};
+
+if (DEFAULT_ACCOUNTS.length === 17) {
+  pass("starter chart carries 17 accounts");
+} else {
+  fail(`starter chart carries ${DEFAULT_ACCOUNTS.length} accounts, expected 17`);
+}
+
+const starterOutOfRange = DEFAULT_ACCOUNTS.filter((account) => {
+  const range = starterRanges[account.category];
+  const value = Number(account.code);
+  return !range || !/^\d{3}$/.test(account.code) || value < range[0] || value > range[1];
+});
+if (starterOutOfRange.length === 0) {
+  pass("every starter account sits inside its category code range");
+} else {
+  fail(`starter accounts outside their category range: ${starterOutOfRange.map((a) => a.code).join(", ")}`);
+}
+
+const starterCodes = DEFAULT_ACCOUNTS.map((account) => account.code);
+if (new Set(starterCodes).size === starterCodes.length) {
+  pass("starter account codes are unique");
+} else {
+  fail("starter account codes contain duplicates");
+}
+
+const contraAccount = DEFAULT_ACCOUNTS.find((account) => account.code === "104");
+if (contraAccount && contraAccount.category === "ASSET" && /contra asset/i.test(contraAccount.description)) {
+  pass("accumulated depreciation is documented as a contra asset");
+} else {
+  fail("account 104 must be an ASSET whose description calls it a contra asset");
+}
+
+const chartSqlRows = [
+  ...starterChartSql.matchAll(/\('(\d{3})', '((?:[^']|'')*)', '([A-Z]+)', '((?:[^']|'')*)'\)/g),
+].map((match) => ({
+  code: match[1],
+  name: match[2].replaceAll("''", "'"),
+  category: match[3],
+  description: match[4].replaceAll("''", "'"),
+}));
+
+const chartDrift = DEFAULT_ACCOUNTS.filter((account) => {
+  const row = chartSqlRows.find((item) => item.code === account.code);
+  return (
+    !row ||
+    row.name !== account.name ||
+    row.category !== account.category ||
+    row.description !== account.description
+  );
+});
+if (chartSqlRows.length === DEFAULT_ACCOUNTS.length && chartDrift.length === 0) {
+  pass("migration 006 and the starter chart agree on every account");
+} else {
+  fail(
+    `migration 006 drifted from the starter chart: ${
+      chartDrift.map((account) => account.code).join(", ") || "row count differs"
+    }`,
+  );
+}
+
+if (
+  /DELETE FROM accounts[\s\S]*ledger_id = 'ledger-default'/.test(starterChartSql) &&
+  /NOT EXISTS \(\s*SELECT 1 FROM journal_entries WHERE ledger_id = 'ledger-default'\s*\)/.test(
+    starterChartSql,
+  )
+) {
+  pass("migration 006 replaces the seeded chart only while that ledger has no entries");
+} else {
+  fail("migration 006 must guard the replacement on the seeded ledger having no entries");
+}
 const connectionSource = readProject("server/db/connection.js");
 const securitySource = readProject("server/middleware/security.js");
 const authMiddleware = readProject("server/middleware/auth.js");
@@ -512,6 +598,12 @@ const demoApi = readProject("demo/api.js");
 const demoMain = readProject("demo/main.js");
 const buildDemo = readProject("scripts/build-demo.mjs");
 const pagesWorkflow = readProject(".github/workflows/pages.yml");
+
+if (demoSeed.profile.name === "AAA Computer Services") {
+  pass("demo profile is AAA Computer Services");
+} else {
+  fail(`demo profile is ${demoSeed.profile.name}, expected AAA Computer Services`);
+}
 
 if (demoSeed.entries.length >= 8 && demoSeed.ledgers.length >= 2 && demoSeed.accounts.length >= 10) {
   pass(

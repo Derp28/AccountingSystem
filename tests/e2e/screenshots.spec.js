@@ -7,10 +7,10 @@ const screenshotDir = path.resolve("screenshots");
 
 async function ensureSetup(page) {
   await ensureAuthenticated(page);
-  await apiJson(page, "PUT", "/api/profile", { name: "Ledgerline Studio" });
-  await apiJson(page, "PUT", "/api/workspace", { name: "Studio books 2026", currency: "USD" });
+  await apiJson(page, "PUT", "/api/profile", { name: "AAA Computer Services" });
+  await apiJson(page, "PUT", "/api/workspace", { name: "General Ledger 2026", currency: "USD" });
   await page.reload();
-  await expect(page.getByRole("heading", { name: /Welcome back, Ledgerline Studio/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Welcome back, AAA Computer Services/i })).toBeVisible();
 }
 
 async function ensureSampleData(page) {
@@ -19,11 +19,11 @@ async function ensureSampleData(page) {
     await postEntry(page, {
       sourceType: "SALES_INVOICE",
       date: "2026-10-18",
-      memo: "Brand identity package — Harbor & Co.",
-      reference: "INV-1042",
+      memo: "Network setup - Dela Cruz Trading",
+      reference: "INV-2001",
       lines: [
-        { accountId: "acct-110", description: "Invoice total", debitCents: 480000, creditCents: 0 },
-        { accountId: "acct-400", description: "Brand identity package", debitCents: 0, creditCents: 480000 },
+        { accountId: "acct-101", description: "Invoice total", debitCents: 480000, creditCents: 0 },
+        { accountId: "acct-400", description: "Network setup and cabling", debitCents: 0, creditCents: 480000 },
       ],
     });
   }
@@ -33,12 +33,12 @@ async function ensureSampleData(page) {
     await postEntry(page, {
       sourceType: "ADJUSTMENT",
       date: "2026-10-19",
-      memo: "Accrue October studio rent",
+      memo: "Accrue October salaries",
       adjustmentType: "ACCRUED_EXPENSE",
-      adjustmentReason: "October rent was not invoiced before month end.",
+      adjustmentReason: "October salaries were not paid before month end.",
       lines: [
-        { accountId: "acct-510", description: "October rent", debitCents: 95000, creditCents: 0 },
-        { accountId: "acct-210", description: "Accrued rent", debitCents: 0, creditCents: 95000 },
+        { accountId: "acct-500", description: "October salaries", debitCents: 95000, creditCents: 0 },
+        { accountId: "acct-203", description: "Salaries payable", debitCents: 0, creditCents: 95000 },
       ],
     });
   }

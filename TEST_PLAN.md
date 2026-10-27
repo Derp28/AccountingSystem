@@ -206,6 +206,13 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-10-24 | Push of a `gh-pages` branch with the built site | PASS, Pages enabled | `has_pages` became true after the push; GitHub enabled Pages on the branch deploy. The workflow was changed to publish `docs/` to `gh-pages` instead of `actions/deploy-pages` |
 | 2026-10-24 | Live site `https://derp28.github.io/AccountingSystem/` | PASS | Served over HTTPS from the project subpath: dashboard totals, reports page, and the unadjusted basis toggle work; no console warnings; zero `/api/` network requests (the fetch shim answers everything in the page) |
 
+| 2026-10-27 | Starter chart (D-035) | PASS, 17 accounts | Fresh disposable SQLite database: migrations plus claim produced 100 Cash through 503 Depreciation Expense - Office Equipment, every code inside the D-018 ranges, with 104 documented as a contra asset |
+| 2026-10-27 | Migration 006 guard | PASS | Disposable database migrated only through 005, one posted entry added, then 006 applied: the ledger kept its original 10 accounts and ids, proving posted history is not relabelled |
+| 2026-10-27 | `npm run check` after the chart change | PASS, 216/216 | Adds starter-chart checks: 17 accounts, category ranges, unique codes, contra-asset wording, migration 006 vs `DEFAULT_ACCOUNTS` agreement, and the empty-ledger guard |
+| 2026-10-27 | `npm test` after the chart change | PASS, 38/38 | Fixtures and account counts realigned (17 seeded accounts, 18 after an added account); health reports schema 6 |
+| 2026-10-27 | `npm run test:e2e` after the chart change | PASS, 9/9 | E2E chart assertions use the new codes; the adjustment flow uses 500 Salaries Expense and 203 Salaries Payable |
+| 2026-10-27 | `npm run demo:build` after the chart change | PASS, 44 files | `demo/books.js` replayed through the real services: 10 entries, 2 ledgers, 34 accounts, profile AAA Computer Services, currency PHP; the sample transactions remain placeholders |
+
 ## Known limitations
 
 - Period close, exports, automated adjustment schedules, tax/VAT/statutory rules, and multi-currency conversion are deferred. The trial balance, income statement, and balance sheet **are** implemented (REP-001..005).
@@ -217,7 +224,8 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 - SQLite is a single-writer local store; concurrent multi-user access is not supported.
 - The GitHub release workflow was not executed here; its configuration is statically checked only.
 - The GitHub Pages demo cannot persist data: everything is in memory, resets on reload, and the sign-in screen accepts any password. Only the demo's wording is rewritten; the shipped app is unchanged.
-- Migration 005 has not yet been applied to the live `data/accounting.sqlite` (schema 4); it applies on the next server start, after the pre-migration backup.
+- Migrations 005 and 006 have not yet been applied to the live `data/accounting.sqlite` (schema 4); they apply on the next server start, after the pre-migration backup.
+- The demo's sample transactions are placeholders on the AAA Computer Services chart until the user supplies the real ones; the accounts themselves are final.
 - The Stage 3 UI has not yet been reviewed or approved by the user.
 - Account codes are constrained to three-digit category hundred-series ranges by D-018; out-of-range codes are rejected by the API, UI, and database triggers.
 - Reversals use the approved D-019 policy: server current UTC date and `GENERAL_JOURNAL` source type.

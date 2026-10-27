@@ -1,5 +1,15 @@
 import crypto from "node:crypto";
 
+/**
+ * The starter Chart of Accounts for AAA Computer Services. Every new ledger is
+ * seeded with exactly these accounts, and migration 006 applies the same chart
+ * to the seeded ledger of an existing installation while it is still empty.
+ *
+ * Codes follow the hundreds series enforced by migration 003: assets 100-199,
+ * liabilities 200-299, equity 300-399, revenue 400-499, expenses 500-599.
+ * Account 104 is a contra asset: it is categorised as an asset but carries a
+ * credit balance, so it reduces total assets instead of adding to them.
+ */
 export const DEFAULT_ACCOUNTS = [
   {
     code: "100",
@@ -15,15 +25,22 @@ export const DEFAULT_ACCOUNTS = [
   },
   {
     code: "102",
-    name: "Prepaid Expenses",
+    name: "Office Supplies",
     category: "ASSET",
-    description: "Costs paid in advance that will be used over time.",
+    description: "Supplies on hand and not yet used.",
   },
   {
     code: "103",
-    name: "Equipment",
+    name: "Office Equipment",
     category: "ASSET",
-    description: "Cameras, lighting, computers, and other studio equipment.",
+    description: "Computers, peripherals, and other equipment used in the business.",
+  },
+  {
+    code: "104",
+    name: "Accumulated Depreciation - Office Equipment",
+    category: "ASSET",
+    description:
+      "Contra asset: depreciation recorded on office equipment. Carries a credit balance and reduces office equipment.",
   },
   {
     code: "200",
@@ -33,33 +50,69 @@ export const DEFAULT_ACCOUNTS = [
   },
   {
     code: "201",
-    name: "Accrued Liabilities",
+    name: "Notes Payable",
     category: "LIABILITY",
-    description: "Expenses incurred but not yet invoiced or paid.",
+    description: "Formal borrowings repayable on agreed terms.",
+  },
+  {
+    code: "202",
+    name: "Unearned Computer Service Revenue",
+    category: "LIABILITY",
+    description: "Service fees collected before the work is performed.",
+  },
+  {
+    code: "203",
+    name: "Salaries Payable",
+    category: "LIABILITY",
+    description: "Salaries earned by staff but not yet paid.",
+  },
+  {
+    code: "204",
+    name: "Advertising Payable",
+    category: "LIABILITY",
+    description: "Advertising received but not yet paid.",
   },
   {
     code: "300",
-    name: "Owner's Equity",
+    name: "A, Capital",
     category: "EQUITY",
-    description: "The owner's investment in the business.",
+    description: "Owner's capital: the owner's investment in the business.",
+  },
+  {
+    code: "301",
+    name: "A, Drawing",
+    category: "EQUITY",
+    description: "Owner's withdrawals: amounts the owner takes out of the business.",
   },
   {
     code: "400",
-    name: "Service Revenue",
+    name: "Computer Services Revenue",
     category: "REVENUE",
-    description: "Income from design, photography, and consulting work.",
+    description: "Income from computer services, support, and repairs.",
   },
   {
     code: "500",
-    name: "Operating Expenses",
+    name: "Salaries Expense",
     category: "EXPENSE",
-    description: "Software, supplies, insurance, and other operating costs.",
+    description: "Wages and salaries paid to staff.",
   },
   {
     code: "501",
-    name: "Rent Expense",
+    name: "Advertising Expense",
     category: "EXPENSE",
-    description: "Monthly studio and workspace rent.",
+    description: "Cost of advertising and promotions.",
+  },
+  {
+    code: "502",
+    name: "Office Supplies Expense",
+    category: "EXPENSE",
+    description: "Office supplies consumed during the period.",
+  },
+  {
+    code: "503",
+    name: "Depreciation Expense - Office Equipment",
+    category: "EXPENSE",
+    description: "Depreciation charged on office equipment.",
   },
 ];
 

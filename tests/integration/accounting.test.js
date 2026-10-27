@@ -75,7 +75,7 @@ test("profile and workspace persist and survive reopening the file", () => {
     const reopened = context.reopen();
     assert.equal(getProfile(reopened).name, "Test Studio");
     assert.equal(getWorkspace(reopened, ledgerId).name, "Test Books");
-    assert.equal(listAccounts(reopened, ledgerId).length, 10);
+    assert.equal(listAccounts(reopened, ledgerId).length, 17);
   } finally {
     context.cleanup();
   }
@@ -118,7 +118,7 @@ test("unbalanced posting is rejected atomically and leaves the draft unchanged",
       ledgerId,
       draftPayload({
         lines: [
-          { accountId: "acct-110", debitCents: 250000, creditCents: 0 },
+          { accountId: "acct-101", debitCents: 250000, creditCents: 0 },
           { accountId: "acct-400", debitCents: 0, creditCents: 240000 },
         ],
       }),
@@ -294,8 +294,8 @@ test("adjustments require a type and reason before posting", () => {
           date: "2026-10-20",
           memo: "Accrue rent",
           lines: [
-            { accountId: "acct-510", debitCents: 50000, creditCents: 0 },
-            { accountId: "acct-210", debitCents: 0, creditCents: 50000 },
+            { accountId: "acct-501", debitCents: 50000, creditCents: 0 },
+            { accountId: "acct-201", debitCents: 0, creditCents: 50000 },
           ],
         }),
       hasStatus(422),
@@ -308,8 +308,8 @@ test("adjustments require a type and reason before posting", () => {
       adjustmentType: "ACCRUED_EXPENSE",
       adjustmentReason: "October rent not yet invoiced",
       lines: [
-        { accountId: "acct-510", debitCents: 50000, creditCents: 0 },
-        { accountId: "acct-210", debitCents: 0, creditCents: 50000 },
+        { accountId: "acct-501", debitCents: 50000, creditCents: 0 },
+        { accountId: "acct-201", debitCents: 0, creditCents: 50000 },
       ],
     });
     const posted = postEntry(db, ledgerId, entry.id);
@@ -366,8 +366,8 @@ test("entry numbers are server-generated, unique, and prefixed by source type", 
       adjustmentType: "OTHER",
       adjustmentReason: "Test numbering",
       lines: [
-        { accountId: "acct-510", debitCents: 1000, creditCents: 0 },
-        { accountId: "acct-210", debitCents: 0, creditCents: 1000 },
+        { accountId: "acct-501", debitCents: 1000, creditCents: 0 },
+        { accountId: "acct-201", debitCents: 0, creditCents: 1000 },
       ],
     }).entry;
 

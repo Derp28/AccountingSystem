@@ -15,6 +15,7 @@ import { listAccounts } from "../server/services/accounts.js";
 import { createDraft, listEntries, postEntry, reverseEntry } from "../server/services/entries.js";
 import { getProfile } from "../server/services/setup.js";
 import { DEFAULT_ACCOUNTS } from "../server/lib/seed-accounts.js";
+import { demoBooks } from "../demo/books.js";
 
 /**
  * Build the static demo published to GitHub Pages.
@@ -54,11 +55,11 @@ let seed;
 try {
   runMigrations(db);
   await claimLocalAccount(db, {
-    displayName: "Avery Chen",
-    username: "demo",
-    password: "demo-only-account-password",
-    ledgerName: "Studio books 2026",
-    currency: "USD",
+    displayName: demoBooks.profile.displayName,
+    username: demoBooks.profile.username,
+    password: demoBooks.profile.password,
+    ledgerName: demoBooks.main.name,
+    currency: demoBooks.main.currency,
   });
 
   const user = getLocalUser(db);
@@ -70,110 +71,36 @@ try {
     return account.id;
   };
 
-  const draft = (input) => createDraft(db, main.id, input).entry;
-  const posted = (input) => {
-    const entry = draft(input);
-    postEntry(db, main.id, entry.id);
-    return entry;
-  };
+  const byReference = new Map();
+  for (const item of demoBooks.entries) {
+    const entry = createDraft(db, main.id, {
+      sourceType: item.sourceType,
+      date: item.date,
+      memo: item.memo,
+      reference: item.reference ?? null,
+      adjustmentType: item.adjustmentType ?? null,
+      adjustmentReason: item.adjustmentReason ?? null,
+      lines: item.lines.map((line) => ({
+        accountId: accountId(line.code),
+        description: line.description,
+        debit: line.debit ?? "0",
+        credit: line.credit ?? "0",
+      })),
+    }).entry;
+    if (item.reference) byReference.set(item.reference, entry);
+    if (item.status !== "DRAFT") postEntry(db, main.id, entry.id);
+  }
 
-  posted({
-    sourceType: "SALES_INVOICE",
-    date: "2026-10-18",
-    memo: "Brand identity package — Harbor & Co.",
-    reference: "INV-1042",
-    lines: [
-      { accountId: accountId("101"), description: "Invoice total", debitCents: 480000, creditCents: 0 },
-      { accountId: accountId("400"), description: "Brand identity package", debitCents: 0, creditCents: 480000 },
-    ],
-  });
-
-  const misissued = posted({
-    sourceType: "SALES_INVOICE",
-    date: "2026-10-12",
-    memo: "Website refresh — Meridian Coffee",
-    reference: "INV-1038",
-    lines: [
-      { accountId: accountId("101"), description: "Invoice total", debitCents: 250000, creditCents: 0 },
-      { accountId: accountId("400"), description: "Website refresh", debitCents: 0, creditCents: 250000 },
-    ],
-  });
-
-  posted({
-    sourceType: "CASH_RECEIPT",
-    date: "2026-10-21",
-    memo: "Payment received — Harbor & Co.",
-    reference: "RCPT-2210",
-    lines: [
-      { accountId: accountId("100"), description: "Deposit", debitCents: 200000, creditCents: 0 },
-      { accountId: accountId("101"), description: "Applied to INV-1042", debitCents: 0, creditCents: 200000 },
-    ],
-  });
-
-  posted({
-    sourceType: "PURCHASE_BILL",
-    date: "2026-10-05",
-    memo: "Adobe subscription — October",
-    reference: "BILL-4471",
-    lines: [
-      { accountId: accountId("500"), description: "Creative Cloud", debitCents: 5500, creditCents: 0 },
-      { accountId: accountId("200"), description: "Payable to Adobe", debitCents: 0, creditCents: 5500 },
-    ],
-  });
-
-  posted({
-    sourceType: "CASH_PAYMENT",
-    date: "2026-10-15",
-    memo: "Studio rent — October",
-    reference: "PAY-8891",
-    lines: [
-      { accountId: accountId("501"), description: "October rent", debitCents: 95000, creditCents: 0 },
-      { accountId: accountId("100"), description: "Bank transfer", debitCents: 0, creditCents: 95000 },
-    ],
-  });
-
-  posted({
-    sourceType: "ADJUSTMENT",
-    date: "2026-10-19",
-    memo: "Accrue October studio rent",
-    adjustmentType: "ACCRUED_EXPENSE",
-    adjustmentReason: "October rent was not invoiced before month end.",
-    lines: [
-      { accountId: accountId("501"), description: "October rent", debitCents: 95000, creditCents: 0 },
-      { accountId: accountId("201"), description: "Accrued rent", debitCents: 0, creditCents: 95000 },
-    ],
-  });
-
-  posted({
-    sourceType: "GENERAL_JOURNAL",
-    date: "2026-10-22",
-    memo: "Owner contribution — camera kit",
-    reference: "JE-2026-04",
-    lines: [
-      { accountId: accountId("103"), description: "Camera and lenses", debitCents: 180000, creditCents: 0 },
-      { accountId: accountId("300"), description: "Owner contribution", debitCents: 0, creditCents: 180000 },
-    ],
-  });
-
-  draft({
-    sourceType: "SALES_INVOICE",
-    date: "2026-10-23",
-    memo: "Retainer — Northline Studio",
-    reference: "INV-1046",
-    lines: [
-      { accountId: accountId("101"), description: "November retainer", debitCents: 150000, creditCents: 0 },
-      { accountId: accountId("400"), description: "Monthly retainer", debitCents: 0, creditCents: 150000 },
-    ],
-  });
-
-  reverseEntry(db, main.id, misissued.id, {
-    reason: "Invoice was issued to the wrong client; reissued under INV-1042.",
-  });
+  for (const reversal of demoBooks.reversals) {
+    const target = byReference.get(reversal.reference);
+    if (!target) throw new Error(`Cannot reverse ${reversal.reference}: it was not seeded.`);
+    reverseEntry(db, main.id, target.id, { reason: reversal.reason });
+  }
 
   const side = createLedger(
     db,
     { user: { id: user.id }, ledger: main },
-    { name: "Side projects", currency: "USD" },
+    demoBooks.second,
   );
 
   seed = {
@@ -266,7 +193,7 @@ const DEMO_TEXT = [
   [
     "js/views/auth.js",
     '<p class="welcome-sub">Use the local account created on this machine.</p>',
-    '<p class="welcome-sub">Demo mode: the username is <strong>demo</strong> and any password works.</p>',
+    '<p class="welcome-sub">Demo mode: any username and password work.</p>',
   ],
   [
     "js/views/auth.js",

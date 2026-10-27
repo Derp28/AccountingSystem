@@ -116,6 +116,40 @@ The published port is bound to `127.0.0.1` on the host. Do not change it to
 `0.0.0.0` unless you intentionally want other machines on your network to reach
 the app; doing so would make it a network service rather than a local one.
 
+## Starter chart of accounts
+
+Every new ledger starts with the AAA Computer Services chart, and the public
+demo uses the same accounts. Codes stay inside each category's hundred series
+(D-018).
+
+| Code | Account | Category |
+|---|---|---|
+| 100 | Cash | Asset |
+| 101 | Accounts Receivable | Asset |
+| 102 | Office Supplies | Asset |
+| 103 | Office Equipment | Asset |
+| 104 | Accumulated Depreciation - Office Equipment | Asset (contra) |
+| 200 | Accounts Payable | Liability |
+| 201 | Notes Payable | Liability |
+| 202 | Unearned Computer Service Revenue | Liability |
+| 203 | Salaries Payable | Liability |
+| 204 | Advertising Payable | Liability |
+| 300 | A, Capital | Equity |
+| 301 | A, Drawing | Equity |
+| 400 | Computer Services Revenue | Revenue |
+| 500 | Salaries Expense | Expense |
+| 501 | Advertising Expense | Expense |
+| 502 | Office Supplies Expense | Expense |
+| 503 | Depreciation Expense - Office Equipment | Expense |
+
+Account 104 is a **contra asset**: it is categorised as an asset but carries a
+credit balance, so it reduces total assets instead of adding to them.
+
+Migration `006_starter_chart.sql` applies this chart to the ledger created by the
+first install, but only while that ledger has no journal entries. A ledger that
+already contains entries keeps its accounts untouched, so posted history is never
+relabelled. Rename, add, or deactivate accounts from **Chart of Accounts**.
+
 ## Multiple ledgers
 
 After signing in, use the ledger switcher in the sidebar to move between ledgers

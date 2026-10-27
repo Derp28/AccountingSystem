@@ -12,7 +12,7 @@ test("reports page renders all three statements and toggles the basis", async ({
     date: "2026-06-15",
     memo: "Reports sale",
     lines: [
-      { accountId: "acct-110", description: "Invoice", debitCents: 300000, creditCents: 0 },
+      { accountId: "acct-101", description: "Invoice", debitCents: 300000, creditCents: 0 },
       { accountId: "acct-400", description: "Revenue", debitCents: 0, creditCents: 300000 },
     ],
   });
@@ -23,8 +23,8 @@ test("reports page renders all three statements and toggles the basis", async ({
     adjustmentType: "OTHER",
     adjustmentReason: "Covers the report test period.",
     lines: [
-      { accountId: "acct-510", description: "Rent", debitCents: 100000, creditCents: 0 },
-      { accountId: "acct-210", description: "Accrued rent", debitCents: 0, creditCents: 100000 },
+      { accountId: "acct-501", description: "Advertising", debitCents: 100000, creditCents: 0 },
+      { accountId: "acct-204", description: "Advertising payable", debitCents: 0, creditCents: 100000 },
     ],
   });
 
@@ -40,12 +40,12 @@ test("reports page renders all three statements and toggles the basis", async ({
   await page.locator("[data-refresh-report]").click();
   await expect(page.getByTestId("report-trial-balance")).toContainText("as of 2026-12-31");
   // The adjustment appears on the adjusted basis.
-  await expect(page.getByTestId("report-trial-balance")).toContainText("Rent Expense");
+  await expect(page.getByTestId("report-trial-balance")).toContainText("Advertising Expense");
 
   // Switching to the unadjusted basis excludes the adjustment.
   await page.locator("[data-report-basis]").selectOption("unadjusted");
   await expect(page.getByTestId("report-trial-balance")).toContainText("Unadjusted basis");
-  await expect(page.getByTestId("report-trial-balance")).not.toContainText("Rent Expense");
+  await expect(page.getByTestId("report-trial-balance")).not.toContainText("Advertising Expense");
   await page.locator("[data-report-basis]").selectOption("adjusted");
   await expect(page.getByTestId("report-trial-balance")).toContainText("Adjusted basis");
 
@@ -57,7 +57,7 @@ test("reports page renders all three statements and toggles the basis", async ({
   await page.locator("[data-refresh-report]").click();
   await expect(page.getByTestId("report-income-statement")).toContainText("2026-06-01 to 2026-06-30");
   await expect(page.getByTestId("report-net-income")).toBeVisible();
-  await expect(page.getByText("Service Revenue").first()).toBeVisible();
+  await expect(page.getByText("Computer Services Revenue").first()).toBeVisible();
 
   // Balance sheet with the computed accumulated earnings line.
   await page.locator('[data-report-tab="balance-sheet"]').click();

@@ -79,7 +79,7 @@ test("health and bootstrap expose the seeded hundreds-series chart of accounts",
     assert.equal(health.status, 200);
     const healthBody = await health.json();
     assert.equal(healthBody.ok, true);
-    assert.equal(healthBody.schemaVersion, 5);
+    assert.equal(healthBody.schemaVersion, 6);
 
     const locked = await (await fetch(`${base}/api/bootstrap`)).json();
     assert.equal(locked.auth.claimed, false);
@@ -88,10 +88,10 @@ test("health and bootstrap expose the seeded hundreds-series chart of accounts",
     const auth = await claim(base);
     const bootstrap = await (await getJson(`${base}/api/bootstrap`, auth)).json();
     assert.equal(bootstrap.profile.name, "API Studio");
-    assert.equal(bootstrap.accounts.length, 10);
+    assert.equal(bootstrap.accounts.length, 17);
     assert.deepEqual(
       bootstrap.accounts.map((account) => account.code),
-      ["100", "101", "102", "103", "200", "201", "300", "400", "500", "501"],
+      ["100", "101", "102", "103", "104", "200", "201", "202", "203", "204", "300", "301", "400", "500", "501", "502", "503"],
     );
     assert.equal(bootstrap.dashboard.equationDifferenceCents, 0);
     assert.equal(bootstrap.auth.authenticated, true);
@@ -193,7 +193,7 @@ test("entry lifecycle: draft, post, reverse, duplicate protection", async () => 
         date: "2026-10-15",
         memo: "HTTP invoice",
         lines: [
-          { accountId: "acct-110", debitCents: 125000, creditCents: 0 },
+          { accountId: "acct-101", debitCents: 125000, creditCents: 0 },
           { accountId: "acct-400", debitCents: 0, creditCents: 125000 },
         ],
       },
@@ -314,7 +314,7 @@ test("SQL metacharacters and markup are stored as inert data", async () => {
     assert.equal(account.name, nasty);
 
     const bootstrap = await (await getJson(`${base}/api/bootstrap`, auth)).json();
-    assert.equal(bootstrap.accounts.length, 11);
+    assert.equal(bootstrap.accounts.length, 18);
     assert.ok(bootstrap.accounts.some((candidate) => candidate.name === nasty));
   });
 });

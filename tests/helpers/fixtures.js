@@ -78,7 +78,7 @@ export function draftPayload(overrides = {}) {
     memo: "Consulting invoice",
     reference: "INV-1001",
     lines: [
-      { accountId: "acct-110", description: "Invoice total", debitCents: 250000, creditCents: 0 },
+      { accountId: "acct-101", description: "Invoice total", debitCents: 250000, creditCents: 0 },
       { accountId: "acct-400", description: "Consulting", debitCents: 0, creditCents: 250000 },
     ],
     ...overrides,
