@@ -77,6 +77,7 @@ npm test                    # unit and integration tests
 npm run test:unit           # unit tests only
 npm run test:e2e            # Playwright browser tests
 npm run auth:reset-password -- <username>
+npm run books:sample        # post demo/books.js into the live ledger (empty ledger only)
 npm run demo:build          # rebuild the static demo site in docs/
 ```
 

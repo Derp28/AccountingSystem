@@ -27,7 +27,7 @@
 
 - Run the app from this project folder with Node.js 24 or newer. The canonical local runtime is Windows Node in this folder; no WSL, NVM, or hard-coded home path is required.
 - Project path: `C:\Users\Chaz Vincent Aurin\Downloads\koreanbananachicken\I FUCKED UP FOLDER\accounting-app`. Paths with spaces are supported: every script resolves the project root from its own file location, never from the shell's working directory.
-- Commands: `npm start` / `npm run dev`, `npm run check`, `npm test`, `npm run test:unit`, `npm run test:e2e`, `npm run auth:reset-password -- <username>`, `npm run demo:build`.
+- Commands: `npm start` / `npm run dev`, `npm run check`, `npm test`, `npm run test:unit`, `npm run test:e2e`, `npm run auth:reset-password -- <username>`, `npm run books:sample`, `npm run demo:build`.
 - App URL: `http://127.0.0.1:3000`; default database: `data/accounting.sqlite`.
 - Public demo: <https://derp28.github.io/AccountingSystem/>, built by `.github/workflows/pages.yml` on every push to `main` and force-published to the `gh-pages` branch, which Pages serves. `npm run demo:build` writes the static site to `docs/`, which is generated output and git-ignored. The demo runs the real UI against an in-memory engine (`demo/api.js`); it cannot persist data, resets on reload, and must say so.
 - E2E URL: `http://127.0.0.1:3100`; E2E database: `data/e2e.sqlite` (reset by `scripts/e2e-server.mjs` on every run).

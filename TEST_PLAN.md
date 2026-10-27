@@ -213,6 +213,7 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-10-27 | `npm run test:e2e` after the chart change | PASS, 9/9 | E2E chart assertions use the new codes; the adjustment flow uses 500 Salaries Expense and 203 Salaries Payable |
 | 2026-10-27 | `npm run demo:build` after the chart change | PASS, 44 files | `demo/books.js` replayed through the real services: 9 entries, 2 ledgers, 34 accounts, profile AAA Computer Services, currency PHP |
 | 2026-10-27 | Demo sample transactions | PASS, 9 entries, equation difference 0 | Owner's December 2023 set posted through the real services: assets 104,300.00 PHP, liabilities 7,500.00, equity 97,000.00, net loss 200.00; every entry balanced, no draft or reversal injected into the sample books |
+| 2026-10-27 | `npm run books:sample` on the live database | PASS, 9 posted entries | Live `data/accounting.sqlite` backed up to `data/backups/pre-sample-books-20261027T034332/`, then the sample books posted through the real services: one ledger (General Ledger for 2023, PHP), 17 accounts, 9 posted entries, 0 drafts, 0 reversals; trial balance debit = credit 112,800.00, assets 104,300.00 = liabilities 7,500.00 + equity 96,800.00 |
 
 ## Known limitations
 
@@ -225,7 +226,7 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 - SQLite is a single-writer local store; concurrent multi-user access is not supported.
 - The GitHub release workflow was not executed here; its configuration is statically checked only.
 - The GitHub Pages demo cannot persist data: everything is in memory, resets on reload, and the sign-in screen accepts any password. Only the demo's wording is rewritten; the shipped app is unchanged.
-- Migrations 005 and 006 have not yet been applied to the live `data/accounting.sqlite` (schema 4); they apply on the next server start, after the pre-migration backup.
+- Migrations 005 and 006 were applied to the live `data/accounting.sqlite` on 2026-10-27 (schema 6) after the pre-migration backup in `data/backups/pre-006-20261027/`; new installations apply them automatically.
 - The demo's sample transactions are the owner's December 2023 set; the 11 December hiring agreement has no entry until payroll is recorded.
 - The Stage 3 UI has not yet been reviewed or approved by the user.
 - Account codes are constrained to three-digit category hundred-series ranges by D-018; out-of-range codes are rejected by the API, UI, and database triggers.

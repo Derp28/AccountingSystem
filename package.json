@@ -9,6 +9,7 @@
     "dev:ui": "node scripts/dev.mjs",
     "start": "node server/index.js",
     "auth:reset-password": "node scripts/reset-password.mjs",
+    "books:sample": "node scripts/seed-live-books.mjs",
     "check": "node scripts/check.mjs",
     "demo:build": "node scripts/build-demo.mjs",
     "test": "node scripts/test.mjs",
