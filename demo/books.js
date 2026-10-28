@@ -184,10 +184,12 @@ export const demoBooks = {
       ],
     },
     {
-      sourceType: "CASH_PAYMENT",
+      sourceType: "ADJUSTMENT",
+      adjustmentType: "OTHER",
+      adjustmentReason: "To record salaries paid to employees.",
       date: "2023-12-31",
-      memo: "Salaries paid",
-      reference: "VOU-003",
+      memo: "Adjusting entry - salaries paid",
+      reference: "ADJ-005",
       status: "POSTED",
       lines: [
         { code: "500", debit: "10000.00", description: "December salaries" },
@@ -195,10 +197,12 @@ export const demoBooks = {
       ],
     },
     {
-      sourceType: "CASH_RECEIPT",
+      sourceType: "ADJUSTMENT",
+      adjustmentType: "OTHER",
+      adjustmentReason: "To record cash received from computer services rendered.",
       date: "2023-12-31",
-      memo: "Computer services rendered for cash",
-      reference: "OR-005",
+      memo: "Adjusting entry - cash services",
+      reference: "ADJ-006",
       status: "POSTED",
       lines: [
         { code: "100", debit: "25000.00", description: "Cash received" },
