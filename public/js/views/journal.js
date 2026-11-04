@@ -97,7 +97,6 @@ export function renderJournal(container, state) {
   container.innerHTML = `
     <div class="page journal-page" data-page="journal">
       ${pageHeader({
-        eyebrow: "General journal",
         title: "General Journal",
         description:
           "Chronological record of every entry, including drafts and adjustments. Expand an entry to inspect its debit and credit lines.",

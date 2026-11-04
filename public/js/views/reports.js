@@ -621,7 +621,6 @@ export function renderReports(container, state) {
   container.innerHTML = `
     <div class="page reports-page" data-page="reports">
       ${pageHeader({
-        eyebrow: "Reports",
         title: "Financial statements",
         description: demo
           ? `Unadjusted and adjusted statements for ${ledgerName} in ${currency}. Reports use posted entries only and are calculated in this browser tab.`

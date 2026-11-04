@@ -548,6 +548,16 @@ tasks:
     status: done
     verification: "2026-11-04 UI review of the live app and demo at 1440/768/390 px. Fixed the report status chip's light-on-light contrast (now dark green rgb(31,77,58) on light green rgb(226,238,230), with a red failure variant), layered the mobile drawer and backdrop above the persistent banner so the close button is reachable at scroll top, and exposed the report body as a labelled tabpanel. Rebuilt the demo (44 files; 16 entries, 2 ledgers, 34 accounts) and reran npm run check 232/232, npm test 41/41, and npm run test:e2e 9/9; screenshots regenerated. User UI approval remains the outstanding gate."
 
+  - id: T-425
+    title: Remove redundant page eyebrows and finalize mobile report-chip wrapping
+    owner: UI Agent
+    phase: 5
+    requirements: [UI-001, UI-013, UI-014, UI-015, QA-010, QA-011]
+    depends_on: [T-424]
+    files: [public/js/components/ui.js, public/js/views/dashboard.js, public/js/views/accounts.js, public/js/views/transactions.js, public/js/views/journal.js, public/js/views/adjustments.js, public/js/views/reports.js, public/css/app.css, UI_REVIEW.md, TEST_PLAN.md, TASKS.yaml]
+    status: done
+    verification: "2026-11-04 user request: removed the redundant page eyebrow labels from every page/tab. The shared pageHeader now renders only title/description/actions; the six views no longer pass an eyebrow; modal eyebrows remain. The same build keeps the mobile report status chip on one line and wraps it below the statement title. Demo rebuilt to 44 files (16 entries, 2 ledgers, 34 accounts). npm run check 232/232, npm test 41/41, npm run test:e2e 9/9; browser pass at 1440/390 found zero page-header eyebrows and a 172.3 by 27.25 px SOE chip with white-space nowrap, no page errors. User UI approval remains the outstanding gate."
+
 gates:
   - id: GATE-0
     name: Discovery
@@ -568,7 +578,7 @@ gates:
   - id: GATE-4
     name: Stage 3 local access, multi-ledger, four financial statements, print/PDF, and distribution
     status: implemented_pending_ui_review
-    evidence: "Implementation and automated verification complete on 2026-11-02: 232/232 static checks, 41/41 backend tests (including a real restart with sessions), 9/9 Playwright tests, npm audit 0 vulnerabilities. Local auth with scrypt/sessions/CSRF/lockout, one account owning multiple ledgers with isolation triggers, and the four adjusted/unadjusted financial statements plus a supporting trial balance are implemented. Migration 007 adds per-account cash-flow classes; the live data/accounting.sqlite is at schema 7 after backups to data/backups/pre-006-20261027/ and data/backups/pre-007-20261102/. The live app prints through the browser print dialog; the demo shows a simulated PDF preview and creates no file. Docker/release packaging and docs are in place. The 2026-11-04 UI review fixed the report-chip contrast and mobile drawer close-button layering, added tabpanel semantics, and reran 232/232 static checks, 41/41 backend tests, and 9/9 Playwright tests. The Stage 3 UI is ready for the user's decision; it has NOT yet been approved by the user."
+    evidence: "Implementation and automated verification complete on 2026-11-02: 232/232 static checks, 41/41 backend tests (including a real restart with sessions), 9/9 Playwright tests, npm audit 0 vulnerabilities. Local auth with scrypt/sessions/CSRF/lockout, one account owning multiple ledgers with isolation triggers, and the four adjusted/unadjusted financial statements plus a supporting trial balance are implemented. Migration 007 adds per-account cash-flow classes; the live data/accounting.sqlite is at schema 7 after backups to data/backups/pre-006-20261027/ and data/backups/pre-007-20261102/. The live app prints through the browser print dialog; the demo shows a simulated PDF preview and creates no file. Docker/release packaging and docs are in place. The 2026-11-04 UI review fixed the report-chip contrast and mobile drawer close-button layering, added tabpanel semantics, and reran 232/232 static checks, 41/41 backend tests, and 9/9 Playwright tests. The final 2026-11-04 pass removed the redundant page eyebrows at the user's request and kept the mobile report status chip on one line; the demo was rebuilt (44 files) and the same 232/232, 41/41, and 9/9 suites passed. The Stage 3 UI is ready for the user's decision; it has NOT yet been approved by the user."
   - id: GATE-5
     name: Public interactive demo on GitHub Pages
     status: passed

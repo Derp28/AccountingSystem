@@ -145,7 +145,6 @@ export function renderAccounts(container, state) {
   container.innerHTML = `
     <div class="page accounts-page" data-page="accounts">
       ${pageHeader({
-        eyebrow: "Chart of accounts",
         title: "Chart of Accounts",
         description:
           "Classify financial activity across assets, liabilities, equity, revenue, and expenses. Inactive accounts remain in historical entries but cannot be used for new postings.",

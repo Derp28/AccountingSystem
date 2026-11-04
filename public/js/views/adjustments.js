@@ -73,7 +73,6 @@ export function renderAdjustments(container, state) {
   container.innerHTML = `
     <div class="page adjustments-page" data-page="adjustments" data-testid="adjustments-page">
       ${pageHeader({
-        eyebrow: "Adjustments",
         title: "Adjustments",
         description:
           "Authorized manual entries for accruals, prepaid allocations, depreciation, or other corrections. No adjustment is calculated automatically.",

@@ -151,6 +151,7 @@ Directory: `screenshots/`
 - `dashboard-390.png`, `accounts-390.png`, `transactions-390.png`, `journal-390.png`, `adjustments-390.png`, `reports-390.png`
 - `mobile-navigation-390.png`
 - `setup-1440.png`, `setup-390.png` (superseded by the Stage 3 claim screen)
+- The 2026-11-04 screenshots were regenerated after the page-header cleanup; each page header now starts with the page title and has no eyebrow.
 
 ## Requirement-to-evidence map
 
@@ -242,7 +243,12 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-11-04 | `npm run demo:build` after the UI review fixes | PASS, 44 files | 16 entries, 2 ledgers, 34 accounts; demo carries the contrast and tabpanel fixes |
 | 2026-11-04 | Browser verification of the UI review fixes | PASS | Demo chip computed `color: rgb(31, 77, 58)` on `background: rgb(226, 238, 230)`; live 390 px drawer's close button hit-tested and clicked at scroll top; `#report-body` reported `role="tabpanel"` with `aria-labelledby="report-tab-owner-equity"` and the accessible name "Statement of Owner's Equity"; no page errors |
 | 2026-11-04 | GitHub Pages deployment of the UI review fixes | PASS | Pushed `8895072`; workflow run 41755729378 succeeded and published `gh-pages` commit 615b618 ("Demo site from 8895072..."). A fresh Chromium context at <https://derp28.github.io/AccountingSystem/?v=8895072#/reports> verified the five tabs, SOCI ₱25,450.00, SOE ₱122,450.00, SOFP ₱128,950.00, SOCF ₱105,800.00, the chip computed `rgb(31, 77, 58)` on `rgb(226, 238, 230)`, the tabpanel label, the simulated preview with a disabled Save as PDF and no download, and a 390 px drawer whose close button hit-tests and closes. No page or console errors. |
-
+| 2026-11-04 | User-requested page-header cleanup | PASS | Removed the shared page-header eyebrow from `public/js/components/ui.js` and the six page views, and removed the unused `.eyebrow` CSS; modal eyebrows remain. The same build keeps the mobile report status chip on one line and wraps it below the statement heading. |
+| 2026-11-04 | `npm run check` after the page-header cleanup | PASS, 232/232 | Static, schema, auth, report, print, and demo checks unchanged |
+| 2026-11-04 | `npm test` after the page-header cleanup | PASS, 41/41 | Unit + integration, including the real restart and report invariants |
+| 2026-11-04 | `npm run test:e2e` after the page-header cleanup | PASS, 9/9 | Auth, critical path, mobile drawer, reports/print, XSS, and screenshots; screenshots regenerated without page eyebrows |
+| 2026-11-04 | `npm run demo:build` after the page-header cleanup | PASS, 44 files | 16 entries, 2 ledgers, 34 accounts; demo carries the no-eyebrow page headers |
+| 2026-11-04 | Browser verification of the page-header cleanup | PASS | Demo at 1440 and 390 px: zero `.page-header .eyebrow` elements on Dashboard, Chart of Accounts, Business Transactions, General Journal, Adjustments, and Reports; SOE chip 172.3 by 27.25 px with `white-space: nowrap`; no page errors |
 
 ## Known limitations
 
@@ -260,7 +266,7 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 - The Statement of Comprehensive Income equals net income because the app has no other comprehensive income items. The Statement of Owner's Equity uses the computed accumulated-earnings line from the balance sheet; the books are not closed.
 - The public demo's PDF preview is simulated. It creates no file and downloads nothing; only the self-hosted live app uses the browser's Print / Save as PDF dialog.
 - The demo's sample transactions are the owner's December 2023 set; the 11 December hiring agreement has no entry until payroll is recorded.
-- The Stage 3 UI has not yet been approved by the user. The 2026-11-04 review fixed the report-chip contrast and mobile drawer close-button layering and recorded the remaining minor observations in `UI_REVIEW.md`.
+- The Stage 3 UI has not yet been approved by the user. The 2026-11-04 review fixed the report-chip contrast, mobile drawer close-button layering, and mobile chip wrapping, and removed the redundant page eyebrows at the user's request; the remaining minor observations are in `UI_REVIEW.md`.
 - Report tabs support Tab/Shift+Tab and Enter/Space but not arrow-key roving focus; the report body is a labelled tabpanel.
 - Account codes are constrained to three-digit category hundred-series ranges by D-018; out-of-range codes are rejected by the API, UI, and database triggers.
 - Reversals use the approved D-019 policy: server current UTC date and `GENERAL_JOURNAL` source type.

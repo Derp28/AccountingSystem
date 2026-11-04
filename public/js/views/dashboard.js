@@ -115,7 +115,6 @@ export function renderDashboard(container, state) {
   container.innerHTML = `
     <div class="page dashboard-page" data-page="dashboard">
       ${pageHeader({
-        eyebrow: "Dashboard",
         title: `Welcome back, ${profileName}`,
         description: `${workspaceName} · ${currency} workspace. Figures below are derived from ${postedCount} posted ${
           postedCount === 1 ? "entry" : "entries"

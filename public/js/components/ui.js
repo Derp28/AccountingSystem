@@ -3,11 +3,10 @@ import { escapeHtml } from "../dom.js";
 import { formatMoney } from "../format.js";
 import { icon } from "../icons.js";
 
-export function pageHeader({ eyebrow, title, description = "", actions = "" }) {
+export function pageHeader({ title, description = "", actions = "" }) {
   return `
     <header class="page-header">
       <div class="page-header-copy">
-        <div class="eyebrow">${escapeHtml(eyebrow)}</div>
         <h1 class="page-title">${escapeHtml(title)}</h1>
         ${description ? `<p class="page-description">${escapeHtml(description)}</p>` : ""}
       </div>

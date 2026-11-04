@@ -69,7 +69,6 @@ export function renderTransactions(container, state) {
   container.innerHTML = `
     <div class="page transactions-page" data-page="transactions">
       ${pageHeader({
-        eyebrow: "Business transactions",
         title: "Business Transactions",
         description:
           "Sales, purchases, receipts, payments, and manual journal entries. Drafts are editable; posted entries are immutable and corrections use reversals.",
