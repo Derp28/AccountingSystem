@@ -113,4 +113,6 @@ export const api = {
   trialBalance: (params) => request(`/api/reports/trial-balance${queryString(params)}`),
   incomeStatement: (params) => request(`/api/reports/income-statement${queryString(params)}`),
   balanceSheet: (params) => request(`/api/reports/balance-sheet${queryString(params)}`),
+  ownerEquity: (params) => request(`/api/reports/owner-equity${queryString(params)}`),
+  cashFlows: (params) => request(`/api/reports/cash-flows${queryString(params)}`),
 };

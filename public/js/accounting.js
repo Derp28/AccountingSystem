@@ -48,6 +48,52 @@ export const ACCOUNT_CODE_RANGES = {
   EXPENSE: { min: 500, max: 599, label: "Expense" },
 };
 
+/**
+ * Cash-flow classification used by the Statement of Cash Flows. CASH marks a
+ * bank or cash-on-hand account; the other classes say where the cash movement
+ * belongs. Equity defaults to financing; every other new account defaults to
+ * operating. The owner's rule places equipment and supplies under investing.
+ */
+export const CASH_FLOW_CLASSES = [
+  {
+    id: "OPERATING",
+    label: "Operating",
+    description: "Customers, suppliers, rent, salaries, and utilities",
+  },
+  {
+    id: "INVESTING",
+    label: "Investing",
+    description: "Equipment and supplies",
+  },
+  {
+    id: "FINANCING",
+    label: "Financing",
+    description: "Capital, drawings, and loan proceeds or payments",
+  },
+  {
+    id: "NON_CASH",
+    label: "Non-cash",
+    description: "Depreciation and similar movements that never touch cash",
+  },
+  {
+    id: "CASH",
+    label: "Cash account",
+    description: "A bank account or cash on hand",
+  },
+];
+
+export const CASH_FLOW_CLASS_MAP = Object.fromEntries(
+  CASH_FLOW_CLASSES.map((item) => [item.id, item]),
+);
+
+export function defaultCashFlowClass(category) {
+  return String(category || "").toUpperCase() === "EQUITY" ? "FINANCING" : "OPERATING";
+}
+
+export function cashFlowClassLabel(value) {
+  return CASH_FLOW_CLASS_MAP[value]?.label || "Operating";
+}
+
 export const SOURCE_TYPES = {
   SALES_INVOICE: {
     id: "SALES_INVOICE",
@@ -354,6 +400,15 @@ export function validateAccountInput(input, accounts, { excludeId = null } = {})
 
   if (!CATEGORY_MAP[input.category]) errors.category = "Choose an account category.";
   if (description.length > 200) errors.description = "Description must be 200 characters or fewer.";
+
+  const cashFlowClass = String(
+    input.cashFlowClass || defaultCashFlowClass(input.category),
+  ).toUpperCase();
+  if (!CASH_FLOW_CLASS_MAP[cashFlowClass]) {
+    errors.cashFlowClass = "Choose a cash flow activity.";
+  } else if (cashFlowClass === "CASH" && input.category !== "ASSET") {
+    errors.cashFlowClass = "Only asset accounts can be marked as cash accounts.";
+  }
 
   return { valid: Object.keys(errors).length === 0, errors };
 }

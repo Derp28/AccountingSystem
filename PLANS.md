@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**Stage 3 implemented — local access, multiple ledgers, reports, and self-hosted distribution (pending user UI review).** Stage 2 remains the approved accounting core. Stage 3 adds a local username/password gate, one local account owning multiple ledgers, and a Reports page with trial balance, income statement, and balance sheet on an adjusted/unadjusted basis. Distribution is source on GitHub plus self-hosted Docker/release copies; there is no public hosting. Automated verification passes (182 static checks, 38 backend tests, 9 Playwright tests, `npm audit` 0). The Stage 3 UI has not yet been reviewed by the user, and migration 005 has not yet been applied to the live database. Period close, exports, multi-currency, tax/VAT, and statutory rules remain deferred.
+**Stage 3 implemented - local access, multiple ledgers, four financial statements, print/PDF, and self-hosted distribution (pending user UI review).** Stage 2 remains the approved accounting core. Stage 3 adds a local username/password gate, one local account owning multiple ledgers, and a Reports page with the Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and a supporting trial balance, all on an adjusted/unadjusted basis. The live app prints or saves the current statement/all four statements through the browser print dialog; the public GitHub Pages demo shows a simulated PDF preview and creates no file. Distribution is source on GitHub plus self-hosted Docker/release copies, plus the static demo. Automated verification passes (232 static checks, 41 backend tests, 9 Playwright tests, `npm audit` 0). The Stage 3 UI has been extended but has not yet been reviewed by the user. The live database is at schema 7 after migration 007 and the pre-007 backup. Period close, exports, multi-currency, tax/VAT, and statutory rules remain deferred.
 
 ## Discovery summary
 
@@ -39,7 +39,7 @@
 
 - `schema_migrations` tracks applied versions; migrations run transactionally and idempotently.
 - `profile` and `workspace` are singleton rows protected by constraints.
-- `accounts` has unique case-insensitive codes, five categories, active/inactive state, and no hard delete.
+- `accounts` has unique case-insensitive codes, five categories, active/inactive state, a cash-flow class (`CASH`, `OPERATING`, `INVESTING`, `FINANCING`, `NON_CASH`), and no hard delete.
 - `journal_entries` stores source type, date, memo, reference, adjustment fields, status, entry number, version, idempotency key, and reversal links.
 - `journal_lines` stores line order, account, description, and integer debit/credit cents.
 - `reversal_links` enforces one reversal per posted entry and links original/reversal entries.
@@ -58,6 +58,7 @@
 - `POST /api/entries/:id/post`, `POST /api/entries/:id/reverse`
 - `GET /api/dashboard`, `GET /api/trial-balance`
 - `GET /api/reports/trial-balance`, `GET /api/reports/income-statement`, `GET /api/reports/balance-sheet`
+- `GET /api/reports/owner-equity`, `GET /api/reports/cash-flows`
 
 ### Validation and consistency
 
@@ -106,8 +107,11 @@ Do not copy the database while writes are in progress. Restore by stopping the s
 ### Reports
 
 - `GET /api/reports/trial-balance?asOf=&basis=`, `GET /api/reports/income-statement?from=&to=&basis=`, and `GET /api/reports/balance-sheet?asOf=&basis=` compute integer-cent figures on the server.
+- `GET /api/reports/owner-equity?from=&to=&basis=` rolls beginning capital forward through additional investments, net income, and withdrawals, and ties ending capital to balance-sheet equity.
+- `GET /api/reports/cash-flows?from=&to=&basis=` uses the cash-line method (D-036): posted lines touching a `CASH` account are classified by the counter-account's `cash_flow_class` into operating, investing, and financing. Non-cash entries and cash transfers are excluded, and operating + investing + financing reconciles to the change in Cash.
 - Adjusted includes every posted entry. Unadjusted excludes adjustment entries and the reversals linked to adjustments. Drafts are excluded and zero-balance accounts are hidden.
 - The balance sheet uses a computed accumulated-earnings line (D-025) because period close is not implemented.
+- The UI labels the statements SOCI, SOE, SOFP, and SOCF with full-name tooltips/accessible labels; the trial balance remains a supporting schedule. The live app prints through the browser dialog; the demo shows a simulated PDF preview only (D-037, D-038).
 
 ### Distribution
 
@@ -129,11 +133,11 @@ Do not copy the database while writes are in progress. Restore by stopping the s
 
 ## Testing and evidence
 
-- `node scripts/check.mjs`: 182 static, schema, API, security, auth, reports, and distribution checks.
-- `bash scripts/test.sh`: 38 unit/integration tests, including a real child-process restart with session persistence.
-- `bash scripts/test-e2e.sh`: 9 Playwright tests (claim/sign-in/lock, ledger switching, critical path, rename, mobile navigation, reports, screenshots, XSS).
+- `node scripts/check.mjs`: 232 static, schema, API, security, auth, reports, print, demo, and distribution checks.
+- `node scripts/test.mjs`: 41 unit/integration tests, including a real child-process restart with session persistence, owner's-equity roll-forward, cash-flow classification/reconciliation, and cash transfers.
+- `node scripts/test-e2e.mjs`: 9 Playwright tests (claim/sign-in/lock, ledger switching, critical path, rename, mobile navigation, four statements plus trial balance, print/PDF, screenshots, XSS).
 - `npm audit`: 0 vulnerabilities across runtime and dev dependencies.
-- Screenshots at 1440, 768, and 390 px are in `screenshots/`, including the six application pages.
+- Screenshots at 1440, 768, and 390 px are in `screenshots/`, refreshed on 2026-11-02 after the statement tabs were added.
 - Exact commands and results are recorded in `TEST_PLAN.md`.
 
 ## Risks and mitigations
@@ -161,4 +165,4 @@ Do not copy the database while writes are in progress. Restore by stopping the s
 2. **G1 — UI approval:** passed 2026-10-20; see `UI_REVIEW.md`.
 3. **G2 — Accounting integrity:** passed; Stage 2 UI approved and policies D-016, D-018, D-019, D-021 confirmed on 2026-10-20. See `TEST_PLAN.md` evidence.
 4. **G3 — Final product signoff / later-stage scope:** passed 2026-10-20 for the Stage 2 scope.
-5. **G4 — Stage 3 local access, multiple ledgers, reports, distribution:** implemented and automatically verified 2026-10-21 (182 static checks, 38 backend tests, 9 E2E tests, `npm audit` 0). Pending user UI review before signoff; migration 005 is not yet applied to the live database.
+5. **G4 - Stage 3 local access, multiple ledgers, four financial statements, print/PDF, distribution:** implemented and automatically verified 2026-11-02 (232 static checks, 41 backend tests, 9 E2E tests, `npm audit` 0). The live database is at schema 7 after migration 007, with a pre-007 backup. Pending user UI review before signoff.

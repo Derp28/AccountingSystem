@@ -88,6 +88,7 @@ function publicAccount(row) {
     code: row.code,
     name: row.name,
     category: row.category,
+    cashFlowClass: row.cashFlowClass || "OPERATING",
     active: Boolean(row.active),
   };
 }
@@ -170,6 +171,7 @@ function createAccount(state, ledgerId, body) {
     name: input.name,
     category: input.category,
     description: input.description,
+    cashFlowClass: input.cashFlowClass,
     active: input.active,
     createdAt: now,
     updatedAt: now,
@@ -188,6 +190,7 @@ function updateAccount(state, ledgerId, id, body) {
     name: input.name,
     category: input.category,
     description: input.description,
+    cashFlowClass: input.cashFlowClass,
     active: input.active,
     updatedAt: new Date().toISOString(),
   });
@@ -607,6 +610,176 @@ function getBalanceSheet(state, ledgerId, { asOf: asOfValue, basis: basisValue }
   };
 }
 
+const sortByCode = (left, right) => left.account.code.localeCompare(right.account.code);
+
+function shiftIsoDate(value, days) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function equitySnapshot(activity, accounts) {
+  let equityCents = 0;
+  let revenueCents = 0;
+  let expenseCents = 0;
+  for (const account of accounts) {
+    const totals = activityFor(activity, account.id);
+    if (account.category === "EQUITY") {
+      equityCents += totals.creditCents - totals.debitCents;
+    } else if (account.category === "REVENUE") {
+      revenueCents += totals.creditCents - totals.debitCents;
+    } else if (account.category === "EXPENSE") {
+      expenseCents += totals.debitCents - totals.creditCents;
+    }
+  }
+  return { equityCents, earningsCents: revenueCents - expenseCents };
+}
+
+function getOwnerEquity(state, ledgerId, { from: fromValue, to: toValue, basis: basisValue } = {}) {
+  const basis = normalizeBasis(basisValue);
+  const { from, to } = normalizePeriod(fromValue, toValue);
+  const accounts = accountRows(state, ledgerId);
+
+  const prior = equitySnapshot(
+    activityRows(state, ledgerId, { to: shiftIsoDate(from, -1), basis }),
+    accounts,
+  );
+  const beginningCapitalCents = prior.equityCents + prior.earningsCents;
+
+  const periodActivity = activityRows(state, ledgerId, { from, to, basis });
+  const period = equitySnapshot(periodActivity, accounts);
+
+  const investmentRows = [];
+  const withdrawalRows = [];
+  for (const account of accounts) {
+    if (account.category !== "EQUITY") continue;
+    const totals = activityFor(periodActivity, account.id);
+    const movementCents = totals.creditCents - totals.debitCents;
+    if (movementCents > 0) {
+      investmentRows.push({ account: publicAccount(account), amountCents: movementCents });
+    } else if (movementCents < 0) {
+      withdrawalRows.push({ account: publicAccount(account), amountCents: -movementCents });
+    }
+  }
+  investmentRows.sort(sortByCode);
+  withdrawalRows.sort(sortByCode);
+
+  const additionalInvestmentsCents = investmentRows.reduce((sum, row) => sum + row.amountCents, 0);
+  const withdrawalsCents = withdrawalRows.reduce((sum, row) => sum + row.amountCents, 0);
+  const netIncomeCents = period.earningsCents;
+  const endingCapitalCents =
+    beginningCapitalCents + additionalInvestmentsCents + netIncomeCents - withdrawalsCents;
+
+  const asOf = equitySnapshot(activityRows(state, ledgerId, { to, basis }), accounts);
+  const reportedEquityCents = asOf.equityCents + asOf.earningsCents;
+  const differenceCents = endingCapitalCents - reportedEquityCents;
+
+  return {
+    basis,
+    from,
+    to,
+    beginningCapitalCents,
+    additionalInvestmentsCents,
+    investmentRows,
+    netIncomeCents,
+    withdrawalsCents,
+    withdrawalRows,
+    endingCapitalCents,
+    reportedEquityCents,
+    differenceCents,
+    balanced: differenceCents === 0,
+  };
+}
+
+function cashBalance(activity, cashAccounts) {
+  return cashAccounts.reduce((sum, account) => {
+    const totals = activityFor(activity, account.id);
+    return sum + totals.debitCents - totals.creditCents;
+  }, 0);
+}
+
+function getCashFlows(state, ledgerId, { from: fromValue, to: toValue, basis: basisValue } = {}) {
+  const basis = normalizeBasis(basisValue);
+  const { from, to } = normalizePeriod(fromValue, toValue);
+  const accounts = accountRows(state, ledgerId);
+  const accountById = new Map(accounts.map((account) => [account.id, account]));
+  const cashAccounts = accounts.filter((account) => (account.cashFlowClass || "OPERATING") === "CASH");
+  const cashAccountIds = new Set(cashAccounts.map((account) => account.id));
+
+  const buckets = { OPERATING: new Map(), INVESTING: new Map(), FINANCING: new Map() };
+  const entries = state.entries.filter((entry) => {
+    if (entry.ledgerId !== ledgerId || entry.status !== "POSTED") return false;
+    if (entry.date < from || entry.date > to) return false;
+    if (basis === "unadjusted") {
+      if (entry.sourceType === "ADJUSTMENT") return false;
+      const original = entry.reversalOf
+        ? state.entries.find((item) => item.id === entry.reversalOf)
+        : null;
+      if (original?.sourceType === "ADJUSTMENT") return false;
+    }
+    return true;
+  });
+
+  for (const entry of entries) {
+    if (!entry.lines.some((line) => cashAccountIds.has(line.accountId))) continue;
+    for (const line of entry.lines) {
+      if (cashAccountIds.has(line.accountId)) continue;
+      const account = accountById.get(line.accountId);
+      if (!account) continue;
+      const effectCents = line.creditCents - line.debitCents;
+      if (effectCents === 0) continue;
+      const flowClass = account.cashFlowClass || "OPERATING";
+      const activity =
+        flowClass === "INVESTING" || flowClass === "FINANCING" ? flowClass : "OPERATING";
+      const bucket = buckets[activity];
+      const row = bucket.get(account.id) || {
+        account: publicAccount(account),
+        amountCents: 0,
+      };
+      row.amountCents += effectCents;
+      bucket.set(account.id, row);
+    }
+  }
+
+  const sectionRows = (bucket) =>
+    [...bucket.values()].filter((row) => row.amountCents !== 0).sort(sortByCode);
+  const operatingRows = sectionRows(buckets.OPERATING);
+  const investingRows = sectionRows(buckets.INVESTING);
+  const financingRows = sectionRows(buckets.FINANCING);
+  const total = (rows) => rows.reduce((sum, row) => sum + row.amountCents, 0);
+
+  const operatingCents = total(operatingRows);
+  const investingCents = total(investingRows);
+  const financingCents = total(financingRows);
+  const netChangeCents = operatingCents + investingCents + financingCents;
+
+  const beginningCashCents = cashBalance(
+    activityRows(state, ledgerId, { to: shiftIsoDate(from, -1), basis }),
+    cashAccounts,
+  );
+  const cashBalanceCents = cashBalance(activityRows(state, ledgerId, { to, basis }), cashAccounts);
+  const endingCashCents = beginningCashCents + netChangeCents;
+  const differenceCents = endingCashCents - cashBalanceCents;
+
+  return {
+    basis,
+    from,
+    to,
+    operatingRows,
+    investingRows,
+    financingRows,
+    operatingCents,
+    investingCents,
+    financingCents,
+    netChangeCents,
+    beginningCashCents,
+    endingCashCents,
+    cashBalanceCents,
+    differenceCents,
+    reconciled: differenceCents === 0,
+  };
+}
+
 function getDashboard(state, ledgerId) {
   const accounts = listAccounts(state, ledgerId);
   const byCategory = Object.fromEntries(
@@ -691,6 +864,7 @@ function seedAccountsFor(state, ledgerId) {
       name: account.name,
       category: account.category,
       description: account.description,
+      cashFlowClass: account.cashFlowClass || "OPERATING",
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -885,6 +1059,26 @@ const routes = [
     (state, _m, _b, _h, query) =>
       getBalanceSheet(state, requireAuth(state).id, {
         asOf: query.get("asOf"),
+        basis: query.get("basis"),
+      }),
+  ],
+  [
+    "GET",
+    /^\/api\/reports\/owner-equity$/,
+    (state, _m, _b, _h, query) =>
+      getOwnerEquity(state, requireAuth(state).id, {
+        from: query.get("from"),
+        to: query.get("to"),
+        basis: query.get("basis"),
+      }),
+  ],
+  [
+    "GET",
+    /^\/api\/reports\/cash-flows$/,
+    (state, _m, _b, _h, query) =>
+      getCashFlows(state, requireAuth(state).id, {
+        from: query.get("from"),
+        to: query.get("to"),
         basis: query.get("basis"),
       }),
   ],

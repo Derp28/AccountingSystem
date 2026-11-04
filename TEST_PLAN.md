@@ -2,32 +2,30 @@
 
 ## Scope
 
-Stage 3 verifies the local Express + SQLite implementation of the approved Ledgerline UI plus local username/password access, multiple ledgers, and the adjusted/unadjusted reports. It covers persistence, migrations, posting, immutability, reversal, duplicate/partial-write prevention, transaction-to-journal consistency, security controls, sessions and CSRF, ledger isolation, the three reports, and the critical browser path. Stage 1 was a UI-only prototype and is recorded separately. Evidence for the approved Stage 2 core remains valid.
+Stage 3 verifies the local Express + SQLite implementation of the approved Ledgerline UI plus local username/password access, multiple ledgers, and the adjusted/unadjusted financial statements: Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and the supporting trial balance. It covers persistence, migrations, posting, immutability, reversal, duplicate/partial-write prevention, transaction-to-journal consistency, security controls, sessions and CSRF, ledger isolation, the statements and their reconciliation, print/PDF output, and the critical browser path. The public demo's simulated PDF preview is also verified. Stage 1 was a UI-only prototype and is recorded separately. Evidence for the approved Stage 2 core remains valid.
 
 Period close, exports, automated adjustment schedules, tax/VAT/statutory logic, multi-currency conversion, and automated backup are out of scope and are not claimed.
 
 ## Environment
 
-- WSL Ubuntu, Node v24.22.0 (`/home/derp_28/.nvm/versions/node/v24.22.0/bin`)
-- Project: `/home/derp_28/accounting-app`
-- App: `http://127.0.0.1:3000`, database `data/accounting.sqlite`
+- Windows Node 24 in this folder (no WSL/NVM dependency)
+- Project: `C:\Users\Chaz Vincent Aurin\Downloads\koreanbananachicken\I FUCKED UP FOLDER\accounting-app`
+- App: `http://127.0.0.1:3000`, database `data/accounting.sqlite` (schema 7)
 - E2E: `http://127.0.0.1:3100`, database `data/e2e.sqlite`
-- Browser: Playwright Chromium in WSL; `scripts/test-e2e.sh` supplies user-local browser libraries
-- SQLite: Node built-in `node:sqlite`, SQLite 3.53.4
-- Date of this evidence run: 2026-10-21
+- Browser: Playwright Chromium; `npm run test:e2e` launches `scripts/test-e2e.mjs` and `scripts/e2e-server.mjs`
+- SQLite: Node built-in `node:sqlite`
+- Date of the latest evidence run: 2026-11-02
 
 ## Commands
 
-```bash
-export PATH=/home/derp_28/.nvm/versions/node/v24.22.0/bin:$PATH
-cd /home/derp_28/accounting-app
-
-./scripts/dev.sh              # start the app on 127.0.0.1:3000
-node scripts/check.mjs        # static, schema, API, security, auth, reports, distribution checks
-bash scripts/test.sh          # unit + integration tests, including restart
-bash scripts/test-e2e.sh      # Playwright auth, critical path, reports, mobile, XSS, screenshots
+```powershell
+npm start                     # start the app on 127.0.0.1:3000
+npm run check                 # static, schema, API, security, auth, reports, print, demo, distribution checks
+npm test                      # unit + integration tests, including restart
+npm run test:e2e              # Playwright auth, critical path, reports, print/PDF, mobile, XSS, screenshots
 npm audit                     # dependency audit
 npm run auth:reset-password -- <username>   # offline password reset (revokes sessions)
+npm run demo:build            # rebuild the static GitHub Pages demo into docs/
 ```
 
 ## Risk matrix
@@ -52,6 +50,9 @@ npm run auth:reset-password -- <username>   # offline password reset (revokes se
 | Cross-ledger data leak | High | Ledger-scoped queries/indexes; isolation triggers; integration isolation test |
 | Wrong adjusted/unadjusted totals | High | Server integer-cent calculation; basis filter; integration invariant tests; E2E basis toggle |
 | Unbalanced balance sheet | High | Server balance check; integration test over both bases |
+| Owner's equity does not roll forward | High | SOE integration test checks beginning capital, investments, net income, withdrawals, ending capital, and balance-sheet tie; E2E asserts the ending capital |
+| Cash-flow statement misclassifies or fails to reconcile | High | Per-account cash-flow class; integration tests for operating/investing/financing, non-cash exclusion, cash transfers, both bases, and ending cash vs Cash balance; E2E asserts section totals |
+| PDF claim is misleading or print output leaks chrome | Medium | Live app uses the browser print dialog with print-only CSS; E2E generates a real `%PDF-` file and checks the letterhead/hidden chrome. Demo uses an explicitly simulated preview with a disabled save button and no file |
 | Personal data shipped in a copy | High | `data/`/`.env` ignored and excluded from the image; fresh empty database per copy |
 | Database file exposed | Medium | `0600` mode test; path not returned by API |
 | Restart loses data | High | Child-process stop/start test against one database file |
@@ -67,13 +68,13 @@ npm run auth:reset-password -- <username>   # offline password reset (revokes se
 
 Command: `node scripts/check.mjs`
 
-Result: **182 passed, 0 failed.** Covers required files, syntax/import resolution, absence of browser storage, Stage 1 accounting fixtures, migration invariants, integer-cent columns, trigger count and messages, account-code range triggers, per-category sequential seed codes, WAL/foreign-key/busy-timeout/`BEGIN IMMEDIATE`, database permissions, loopback refusal, CSP and security middleware, API route registration, prepared-SQL checks, no `eval`, client API usage, package scripts, and `.gitignore`. Stage 3 additions assert migration 005's auth/ledger schema and isolation triggers, the scrypt/session/lockout safeguards, the cookie and CSRF middleware, the three report routes and adjusted-basis filter, the Docker loopback/boundary settings, and that `data/`/`.env` stay ignored while `.env.example` is kept.
+Result: **232 passed, 0 failed.** Covers required files, syntax/import resolution, absence of browser storage, Stage 1 accounting fixtures, migration invariants, integer-cent columns, trigger count and messages, account-code range triggers, per-category sequential seed codes, WAL/foreign-key/busy-timeout/`BEGIN IMMEDIATE`, database permissions, loopback refusal, CSP and security middleware, API route registration, prepared-SQL checks, no `eval`, client API usage, package scripts, and `.gitignore`. Stage 3 additions assert migration 005's auth/ledger schema and isolation triggers, the scrypt/session/lockout safeguards, the cookie and CSRF middleware, the three original report routes and adjusted-basis filter, migration 007's cash-flow classes, owner's equity and cash-flow routes/services, the SOCI/SOE/SOFP/SOCF/TB tabs and tooltips, print/PDF CSS, the demo's simulated preview and sample-period defaults, the Docker loopback/boundary settings, and that `data/`/`.env` stay ignored while `.env.example` is kept.
 
 ### Unit and integration tests
 
-Command: `bash scripts/test.sh`
+Command: `npm test`
 
-Result: **38 tests, 38 passed, 0 failed** (10 unit + 28 integration).
+Result: **41 tests, 41 passed, 0 failed** (10 unit + 31 integration).
 
 Unit coverage:
 
@@ -111,10 +112,13 @@ Integration coverage:
 - Stage 3 login: verifies the password, rejects four wrong attempts with 401, locks on the fifth with 429, and a reset changes the password and revokes sessions.
 - Stage 3 ledger isolation: a new ledger gets its own seeded chart; the same account code is allowed in two ledgers; entries and reports do not leak across ledgers; cross-ledger account references are rejected.
 - Stage 3 reports: adjusted trial balance includes the adjustment, unadjusted excludes it and the linked reversal; income statement period totals and net income; balance sheet balances on both bases with computed accumulated earnings; invalid basis and reversed date ranges are rejected.
+- Stage 3 owner's equity: beginning capital, additional investments, period net income, withdrawals, and ending capital roll forward; ending capital equals the balance sheet's total equity; a later period carries the prior ending capital forward; the unadjusted basis excludes the adjustment.
+- Stage 3 cash flows: posted cash lines classify into operating, investing, and financing by the counter-account's class; non-cash entries are excluded; a transfer between two cash accounts is excluded; operating + investing + financing equals the change in Cash; beginning cash + net change = ending cash; both bases are covered.
+- Stage 3 cash-flow class persistence: account create/update round-trips the class; unknown classes are rejected; CASH is limited to asset accounts; equity defaults to FINANCING and other new accounts default to OPERATING; database CHECK rejects invalid values.
 
 ### Browser end-to-end tests
 
-Command: `bash scripts/test-e2e.sh`
+Command: `npm run test:e2e`
 
 Result: **9 tests, 9 passed, 0 failed.**
 
@@ -124,7 +128,7 @@ Result: **9 tests, 9 passed, 0 failed.**
 4. Critical path: seeded COA → add account (asserting prefilled next codes `104` and `502`, then rejecting an out-of-range code) → sale draft → post → journal → adjustment draft/post → reversal → reload → dashboard trial balance/equation.
 5. Profile/ledger rename through settings → reload → renamed values persist.
 6. Mobile navigation: 390 px drawer, Escape close, no page-level horizontal overflow.
-7. Reports: adjusted/unadjusted trial balance, income statement for a June period, and balance sheet with the computed accumulated earnings line.
+7. Reports: five abbreviated tabs (SOCI, SOE, SOFP, SOCF, TB) with full names in `aria-label`/`data-tooltip` and a visible hover tooltip; adjusted/unadjusted trial balance; SOCI net income 3,500; SOE ending capital 13,200; SOFP total liabilities + equity 14,200; SOCF operating 2,500, investing (4,000), financing 9,700, net change and ending cash 8,200; print media hides the sidebar and shows the letterhead; `Print / Save as PDF` calls the browser print dialog; `page.pdf()` produces a real `%PDF-` buffer; Print all creates a four-statement sheet. Test data is posted through the API for June 2026.
 8. Screenshot capture at 1440×900, 768×1024, and 390×844 for Dashboard, Chart of Accounts, Business Transactions, General Journal, Adjustments, and Reports.
 9. XSS: user markup in account name/description renders as text; no script/img/svg execution; no page errors.
 
@@ -155,16 +159,23 @@ Directory: `screenshots/`
 | ONB-001..006 (superseded) | Historical Stage 2 onboarding; replaced by AUTH/LED groups in Stage 3 |
 | AUTH-001..008 | Claim/login/lock E2E; HTTP 401/403 tests; lockout and reset integration; static scrypt/session/cookie checks |
 | LED-001..004 | Ledger switcher E2E; isolation and new-ledger integration; `data/`/`.env` ignore checks |
-| REP-001..005 | Report integration invariants; reports E2E (basis toggle, three tabs); static route/basis checks |
+| REP-001..005 | Report integration invariants; reports E2E (basis toggle, trial balance, SOCI, SOFP); static route/basis checks |
+| REP-006 | SOE service/route integration (roll-forward, balance-sheet tie, later period, unadjusted); reports E2E ending capital 13,200; static service/route/client checks |
+| REP-007 | SOCF service/route integration (section classification, reconciliation, non-cash exclusion, cash transfers, both bases); reports E2E operating 2,500 / investing (4,000) / financing 9,700 / ending cash 8,200; static checks |
+| REP-008 | Migration 007 CHECK and starter chart classifications; validation/account persistence integration and unit tests; account-form browser check; static checks |
+| REP-009 | Reports E2E tab labels, `aria-label`/`data-tooltip`, hover tooltip, full statement headings; static tab/tooltip checks |
+| REP-010 | Reports E2E stubs `window.print`, checks print-media letterhead/hidden chrome, generates a `%PDF-` file, and verifies Print all renders four statements; static print-CSS checks |
+| REP-011 | Demo build + browser walkthrough of the simulated preview (disabled Save as PDF, no-file note, Preview all); static demo flag/preview checks |
 | UI-001..015 | E2E auth, critical path, mobile drawer, reports, settings rename, screenshots, static checks, CSS/accessibility review |
 | ACC-001..017 | Unit validation, integration lifecycle/immutability/reversal/balances/equation, E2E critical path, schema triggers |
-| ACC-018 | Period close, exports, tax, multi-currency, and automated adjustments deferred; formal statements implemented as REP-001..005 |
+| ACC-018 | Period close, exports, tax, multi-currency, and automated adjustments deferred; the four financial statements plus trial balance are implemented as REP-001..011 |
+| ACC-019 | Cash-flow activity rules encoded in the starter chart and per-account `cash_flow_class`; SOCF integration covers operating/investing/financing and excludes non-cash movements |
 | DB-001..008, DB-010..012 | Migration/schema checks, integrity tests, real restart, ledger isolation triggers, prepared-SQL check |
 | DB-009 | Manual stopped-server backup documented in `PLANS.md`; automated backup deferred |
-| DB-013 | Migration 005 preserves legacy data by assigning it to `ledger-default`; string checks plus backup of the live file |
+| DB-013 | Migration 005 preserves legacy data by assigning it to `ledger-default`; migrations 006/007 preserve posted history and add the starter chart/cash-flow classes; string checks plus backups of the live file |
 | SEC-001..008 | Loopback checks, Origin/content-type/body-limit tests, CSRF/session tests, XSS test, SQL injection test, error hygiene review, `0600` test, CSP/static checks, `npm audit` |
 | DIST-001..003 | Docker/compose/.env.example/README static checks; `data/` and `.env` excluded from git and the image |
-| QA-001..014 | Traceability self-audit, 182 static checks, 38 backend tests, 9 E2E tests, restart, screenshots, exact evidence in this file |
+| QA-001..014 | Traceability self-audit, 232 static checks, 41 backend tests, 9 E2E tests, restart, screenshots, exact evidence in this file |
 
 This mapping is a **self-audit** by the implementing agent; no independent external audit is claimed.
 
@@ -214,10 +225,20 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-10-27 | `npm run demo:build` after the chart change | PASS, 44 files | `demo/books.js` replayed through the real services: 16 entries, 2 ledgers, 34 accounts, profile AAA Computer Services, currency PHP |
 | 2026-10-27 | Demo sample transactions | PASS, 16 entries, equation difference 0 | Owner's December 2023 set plus the six 31 December adjusting entries posted through the real services: unadjusted trial balance 118,300.00, adjusted 153,650.00; assets 128,950.00 PHP, liabilities 6,500.00, equity 122,450.00, net income 25,450.00; every entry balanced, no draft or reversal injected into the sample books |
 | 2026-10-27 | `npm run books:sample` on the live database | PASS, 16 posted entries | Live `data/accounting.sqlite` backed up to `data/backups/pre-sample-books-20261027T034332/`, then the sample books posted through the real services: one ledger (General Ledger for 2023, PHP), 17 accounts, 16 posted entries (6 of them adjustments), 0 drafts, 0 reversals; unadjusted trial balance 118,300.00, adjusted 153,650.00, assets 128,950.00 = liabilities 6,500.00 + equity 122,450.00 |
+| 2026-11-02 | Live database pre-007 backup | PASS | `data/backups/pre-007-20261102/` contains `accounting.sqlite`; the server was stopped for the copy |
+| 2026-11-02 | Live database migration to schema 7 | PASS | Migration 007 added `cash_flow_class` with its CHECK; all 17 starter accounts carry the expected classes (100 CASH; 102/103 INVESTING; 104 NON_CASH; 201/300/301 FINANCING; the rest OPERATING); posted history unchanged |
+| 2026-11-02 | `npm run check` | PASS, 232/232 | Adds cash-flow class/migration checks, SOE/SOCF service/route/client checks, tab/tooltip/print/preview checks, and integration/E2E coverage checks |
+| 2026-11-02 | `npm test` | PASS, 41/41 | Unit + integration; includes SOE roll-forward and balance-sheet tie, SOCF classification/reconciliation/cash transfers, and schema version 7 |
+| 2026-11-02 | `npm run test:e2e` | PASS, 9/9 | Reports spec asserts the five tabs, tooltips, SOCI/SOE/SOFP/SOCF figures, print media, a real `%PDF-` file, and Print all; screenshots regenerated |
+| 2026-11-02 | `npm audit` | PASS, 0 vulnerabilities | Terminal output |
+| 2026-11-02 | `npm run demo:build` | PASS, 44 files | Replays the sample books through the real services: 16 entries, 2 ledgers, 34 accounts; writes `docs/` with the updated demo |
+| 2026-11-02 | Browser walkthrough of the rebuilt demo (`http://127.0.0.1:4174`, static `docs/`) | PASS | Five tabs and full-name tooltips; SOCI adjusted 44,300.00 − 18,850.00 = 25,450.00; SOE ending capital 122,450.00; SOFP 128,950.00 = 6,500.00 + 122,450.00; SOCF operating 25,300.00, investing (16,500.00), financing 97,000.00, net/ending cash 105,800.00; reports default to 2023-12-01..2023-12-31; Download PDF and Preview all open a simulated preview with a disabled Save as PDF and an explicit no-file note; account form shows Office Supplies preselected as Investing and saves a change. No application console errors |
+| 2026-11-02 | Screenshot evidence | PASS, refreshed 18 PNGs | `screenshots/` regenerated by the Playwright screenshot spec at 1440, 768, and 390 px |
+
 
 ## Known limitations
 
-- Period close, exports, automated adjustment schedules, tax/VAT/statutory rules, and multi-currency conversion are deferred. The trial balance, income statement, and balance sheet **are** implemented (REP-001..005).
+- Period close, exports, automated adjustment schedules, tax/VAT/statutory rules, and multi-currency conversion are deferred. The trial balance and the four financial statements (SOCI, SOE, SOFP, SOCF) **are** implemented (REP-001..011).
 - Automated backup is not implemented; only the documented stopped-server file copy exists.
 - The password protects the running app, not the SQLite file. Data-at-rest protection requires full-disk encryption; the app says so on the access screen.
 - There is no email recovery or password-reset link; recovery is the offline `npm run auth:reset-password` command.
@@ -226,7 +247,10 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 - SQLite is a single-writer local store; concurrent multi-user access is not supported.
 - The GitHub release workflow was not executed here; its configuration is statically checked only.
 - The GitHub Pages demo cannot persist data: everything is in memory, resets on reload, and the sign-in screen accepts any password. Only the demo's wording is rewritten; the shipped app is unchanged.
-- Migrations 005 and 006 were applied to the live `data/accounting.sqlite` on 2026-10-27 (schema 6) after the pre-migration backup in `data/backups/pre-006-20261027/`; new installations apply them automatically.
+- Migrations 005, 006, and 007 were applied to the live `data/accounting.sqlite` (schema 7) after the pre-migration backups in `data/backups/pre-006-20261027/` and `data/backups/pre-007-20261102/`; new installations apply them automatically.
+- The Statement of Cash Flows is a direct cash-line presentation: line labels are the counter-account names, cash transfers are excluded, and the section totals reconcile to the Cash account. It is not a jurisdiction-specific statutory format, and no tax/VAT/period-close rules are applied.
+- The Statement of Comprehensive Income equals net income because the app has no other comprehensive income items. The Statement of Owner's Equity uses the computed accumulated-earnings line from the balance sheet; the books are not closed.
+- The public demo's PDF preview is simulated. It creates no file and downloads nothing; only the self-hosted live app uses the browser's Print / Save as PDF dialog.
 - The demo's sample transactions are the owner's December 2023 set; the 11 December hiring agreement has no entry until payroll is recorded.
 - The Stage 3 UI has not yet been reviewed or approved by the user.
 - Account codes are constrained to three-digit category hundred-series ranges by D-018; out-of-range codes are rejected by the API, UI, and database triggers.

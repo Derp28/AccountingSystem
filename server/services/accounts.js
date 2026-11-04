@@ -11,6 +11,7 @@ function mapAccount(row) {
     name: row.name,
     category: row.category,
     description: row.description,
+    cashFlowClass: row.cash_flow_class || "OPERATING",
     active: Boolean(row.active),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -84,8 +85,9 @@ export function createAccount(db, ledgerId, body) {
     const now = new Date().toISOString();
     db.prepare(`
       INSERT INTO accounts (
-        id, ledger_id, code, name, category, description, active, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, ledger_id, code, name, category, description, cash_flow_class,
+        active, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       ledgerId,
@@ -93,6 +95,7 @@ export function createAccount(db, ledgerId, body) {
       input.name,
       input.category,
       input.description,
+      input.cashFlowClass,
       input.active ? 1 : 0,
       now,
       now,
@@ -102,22 +105,29 @@ export function createAccount(db, ledgerId, body) {
 }
 
 export function updateAccount(db, ledgerId, id, body) {
-  const input = normalizeAccountInput(body);
   return transaction(db, () => {
     const existing = db
       .prepare("SELECT * FROM accounts WHERE id = ? AND ledger_id = ?")
       .get(id, ledgerId);
     if (!existing) throw new NotFoundError("The account was not found.");
+    // Keep the stored class when an older client omits the optional field;
+    // only an explicit value or a create should apply the default.
+    const input = normalizeAccountInput({
+      ...body,
+      cashFlowClass: body?.cashFlowClass ?? existing.cash_flow_class,
+    });
     assertCodeAvailable(db, ledgerId, input.code, id);
     db.prepare(`
       UPDATE accounts
-      SET code = ?, name = ?, category = ?, description = ?, active = ?, updated_at = ?
+      SET code = ?, name = ?, category = ?, description = ?, cash_flow_class = ?,
+          active = ?, updated_at = ?
       WHERE id = ? AND ledger_id = ?
     `).run(
       input.code,
       input.name,
       input.category,
       input.description,
+      input.cashFlowClass,
       input.active ? 1 : 0,
       new Date().toISOString(),
       id,

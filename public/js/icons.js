@@ -42,6 +42,7 @@ const ICONS = {
   more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
   lock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   save: '<path d="M5 4h12l2 2v14H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',
+  printer: '<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 17h12v4H6z"/>',
   refresh: '<path d="M20 11a8 8 0 1 0-2.3 6.2"/><path d="M20 4v7h-7"/>',
   coins: '<ellipse cx="9" cy="7" rx="5" ry="2.5"/><path d="M4 7v4c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V7"/><path d="M4 11v4c0 1.4 2.2 2.5 5 2.5 1.2 0 2.3-.2 3.1-.6"/><ellipse cx="16" cy="15" rx="4" ry="2"/><path d="M12 15v3c0 1.1 1.8 2 4 2s4-.9 4-2v-3"/>',
   ledger:

@@ -79,7 +79,7 @@ test("health and bootstrap expose the seeded hundreds-series chart of accounts",
     assert.equal(health.status, 200);
     const healthBody = await health.json();
     assert.equal(healthBody.ok, true);
-    assert.equal(healthBody.schemaVersion, 6);
+    assert.equal(healthBody.schemaVersion, 7);
 
     const locked = await (await fetch(`${base}/api/bootstrap`)).json();
     assert.equal(locked.auth.claimed, false);

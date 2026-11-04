@@ -1,7 +1,10 @@
 import {
+  CASH_FLOW_CLASSES,
   CATEGORIES,
   CATEGORY_MAP,
   accountDisplayBalance,
+  cashFlowClassLabel,
+  defaultCashFlowClass,
   getCategory,
   nextAccountCode,
   validateAccountInput,
@@ -21,6 +24,15 @@ function categoryOptions(selected) {
   ).join("");
 }
 
+function cashFlowOptions(selected) {
+  return CASH_FLOW_CLASSES.map(
+    (item) =>
+      `<option value="${item.id}" ${item.id === selected ? "selected" : ""}>${escapeHtml(
+        item.label,
+      )} — ${escapeHtml(item.description)}</option>`,
+  ).join("");
+}
+
 function displayBalance(account, state) {
   return typeof account.balanceCents === "number"
     ? account.balanceCents
@@ -30,18 +42,28 @@ function displayBalance(account, state) {
 function accountRowHtml(account, state, currency) {
   const balance = displayBalance(account, state);
   const category = getCategory(account.category);
+  const flowLabel =
+    account.cashFlowClass && account.cashFlowClass !== "OPERATING"
+      ? cashFlowClassLabel(account.cashFlowClass)
+      : "";
   return `
     <tr
       data-account-row
       data-account-code="${escapeHtml(account.code)}"
       data-category="${account.category}"
       data-status="${account.active ? "active" : "inactive"}"
-      data-search="${escapeHtml(`${account.code} ${account.name} ${account.description}`.toLowerCase())}"
+      data-search="${escapeHtml(
+        `${account.code} ${account.name} ${account.description} ${flowLabel}`.toLowerCase(),
+      )}"
       class="${account.active ? "" : "is-inactive"}"
     >
       <td data-label="Code"><span class="account-code">${escapeHtml(account.code)}</span></td>
       <td data-label="Account">
-        <div class="account-name">${escapeHtml(account.name)}</div>
+        <div class="account-name">${escapeHtml(account.name)}${
+          flowLabel
+            ? ` <span class="flow-badge" title="Cash flow activity">${escapeHtml(flowLabel)}</span>`
+            : ""
+        }</div>
         <div class="account-description">${escapeHtml(account.description || "No description")}</div>
       </td>
       <td data-label="Normal balance"><span class="muted">${escapeHtml(
@@ -281,6 +303,8 @@ function openAccountEditor(account = null) {
   const isEdit = Boolean(account);
   const initialCategory = account?.category || "ASSET";
   const initialCode = account?.code || nextAccountCode(state.accounts, initialCategory);
+  const initialCashFlowClass =
+    account?.cashFlowClass || defaultCashFlowClass(initialCategory);
   const content = `
     <form class="modal-form" data-account-form novalidate>
       <div class="field-row">
@@ -318,6 +342,15 @@ function openAccountEditor(account = null) {
         <p class="help">Normal balance is derived from the category: assets and expenses are debit-normal; liabilities, equity, and revenue are credit-normal.</p>
       </div>
 
+      <div class="field">
+        <label class="label" for="account-cash-flow">Cash flow activity</label>
+        <select class="select" id="account-cash-flow" data-account-cash-flow>
+          ${cashFlowOptions(initialCashFlowClass)}
+        </select>
+        <p class="field-error" id="account-cash-flow-error" hidden></p>
+        <p class="help">Used by the Statement of Cash Flows. Mark bank and cash-on-hand accounts as Cash. Equity defaults to Financing; every other new account starts as Operating. The owner's rule places equipment and supplies under Investing.</p>
+      </div>
+
       <label class="cluster" style="display:flex; align-items:center; gap:9px; font-size:12.5px">
         <input type="checkbox" data-account-active ${account?.active !== false ? "checked" : ""} />
         <span>Account is active and available for new entries</span>
@@ -347,12 +380,14 @@ function openAccountEditor(account = null) {
       const nameInput = qs("[data-account-name]", dialog);
       const categoryInput = qs("[data-account-category-input]", dialog);
       const descriptionInput = qs("[data-account-description]", dialog);
+      const cashFlowInput = qs("[data-account-cash-flow]", dialog);
       const activeInput = qs("[data-account-active]", dialog);
       const errors = {
         code: qs("#account-code-error", dialog),
         name: qs("#account-name-error", dialog),
         category: qs("#account-category-error", dialog),
         description: qs("#account-description-error", dialog),
+        cashFlowClass: qs("#account-cash-flow-error", dialog),
       };
       const saveButton = qs("[data-save-account]", dialog);
 
@@ -364,13 +399,23 @@ function openAccountEditor(account = null) {
       }
 
       let codeEdited = false;
+      let cashFlowEdited = false;
       codeInput.addEventListener("input", () => {
         codeEdited = true;
         codeInput.classList.remove("is-invalid");
         codeInput.removeAttribute("aria-invalid");
         errors.code.hidden = true;
       });
+      cashFlowInput.addEventListener("change", () => {
+        cashFlowEdited = true;
+        cashFlowInput.classList.remove("is-invalid");
+        cashFlowInput.removeAttribute("aria-invalid");
+        errors.cashFlowClass.hidden = true;
+      });
       categoryInput.addEventListener("change", () => {
+        if (!isEdit && !cashFlowEdited) {
+          cashFlowInput.value = defaultCashFlowClass(categoryInput.value);
+        }
         if (isEdit || codeEdited) return;
         codeInput.value = nextAccountCode(state.accounts, categoryInput.value);
         codeInput.classList.remove("is-invalid");
@@ -385,6 +430,7 @@ function openAccountEditor(account = null) {
           name: nameInput.value,
           category: categoryInput.value,
           description: descriptionInput.value,
+          cashFlowClass: cashFlowInput.value,
           active: activeInput.checked,
         };
         const validation = validateAccountInput(payload, state.accounts, {
@@ -396,11 +442,20 @@ function openAccountEditor(account = null) {
           setFieldError(nameInput, errors.name, validation.errors.name);
           setFieldError(categoryInput, errors.category, validation.errors.category);
           setFieldError(descriptionInput, errors.description, validation.errors.description);
+          setFieldError(
+            cashFlowInput,
+            errors.cashFlowClass,
+            validation.errors.cashFlowClass,
+          );
           (validation.errors.code
             ? codeInput
             : validation.errors.name
               ? nameInput
-              : categoryInput
+              : validation.errors.category
+                ? categoryInput
+                : validation.errors.cashFlowClass
+                  ? cashFlowInput
+                  : codeInput
           ).focus();
           return;
         }
@@ -419,10 +474,24 @@ function openAccountEditor(account = null) {
           setFieldError(nameInput, errors.name, byField.name);
           setFieldError(categoryInput, errors.category, byField.category);
           setFieldError(descriptionInput, errors.description, byField.description);
-          if (!byField.code && !byField.name && !byField.category && !byField.description) {
+          setFieldError(cashFlowInput, errors.cashFlowClass, byField.cashFlowClass);
+          if (
+            !byField.code &&
+            !byField.name &&
+            !byField.category &&
+            !byField.description &&
+            !byField.cashFlowClass
+          ) {
             showToast("Could not save account", result.errors[0]?.message, "error");
           }
-          (byField.code ? codeInput : byField.name ? nameInput : codeInput).focus();
+          (byField.code
+            ? codeInput
+            : byField.name
+              ? nameInput
+              : byField.cashFlowClass
+                ? cashFlowInput
+                : codeInput
+          ).focus();
           return;
         }
 

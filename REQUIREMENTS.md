@@ -2,7 +2,7 @@
 
 Single source of truth for requirements and acceptance criteria. Task mappings refer to `TASKS.yaml`. Deferred items are explicit and are not claimed as implemented.
 
-**Stage 3 scope (current):** local username/password access, one local account owning multiple ledgers, and a Reports page with trial balance, income statement, and balance sheet on an adjusted/unadjusted basis, plus source-plus-self-hosted distribution. Requirements ONB-001..ONB-006 are superseded by the AUTH and LED groups below; their original acceptance criteria remain as historical record.
+**Stage 3 scope (current):** local username/password access, one local account owning multiple ledgers, and a Reports page with the four financial statements — Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), and Statement of Cash Flows (SOCF) — plus a supporting trial balance, on an adjusted/unadjusted basis, plus source-plus-self-hosted distribution. Requirements ONB-001..ONB-006 are superseded by the AUTH and LED groups below; their original acceptance criteria remain as historical record.
 
 ## Onboarding
 
@@ -43,9 +43,15 @@ Single source of truth for requirements and acceptance criteria. Task mappings r
 |---|---|---|---|
 | REP-001 | Adjusted/Unadjusted basis | Every report has a shared basis toggle, default Adjusted. Adjusted includes all posted entries. Unadjusted excludes adjustment entries and the reversals linked to adjustments. Drafts are never included. | T-408, T-412 |
 | REP-002 | Trial balance | Net debit/credit per account with as-of-date filtering, grand totals, and a zero difference; zero-balance accounts are hidden. | T-408, T-412 |
-| REP-003 | Income statement | From/to period with revenue lines, expense lines, and net income or loss. Defaults to the current month. | T-408, T-412 |
-| REP-004 | Balance sheet | As-of-date report with assets, liabilities, a computed accumulated earnings line, total equity, and total liabilities + equity, with a balanced indicator. | T-408, T-412 |
+| REP-003 | Statement of Comprehensive Income (SOCI) | From/to period with revenue lines, expense lines, total revenue, total expenses, and net income or loss. Presented as the Statement of Comprehensive Income; the app has no other comprehensive income items, so comprehensive income equals net income. Defaults to the current month. | T-408, T-412, T-417, T-420 |
+| REP-004 | Statement of Financial Position (SOFP) | As-of-date report with assets, liabilities, a computed accumulated earnings line, total equity, and total liabilities + equity, with a balanced indicator. Presented as the Statement of Financial Position; Assets = Liabilities + Owner's equity. | T-408, T-412, T-417, T-420 |
 | REP-005 | Server-calculated and ledger-scoped | All figures are calculated on the server in integer cents from posted lines and are scoped to the active ledger. | T-408, T-412 |
+| REP-006 | Statement of Owner's Equity (SOE) | From/to period with beginning capital, additional investments, net income, withdrawals, and ending capital. Ending capital = beginning capital + additional investments + net income − withdrawals, and it ties to the Statement of Financial Position's total equity. | T-417, T-420 |
+| REP-007 | Statement of Cash Flows (SOCF) | From/to period with operating, investing, and financing sections; net change in cash; and beginning cash + net change = ending cash. Ending cash reconciles to the Cash account, non-cash entries are excluded, and transfers between cash accounts are excluded. | T-418, T-420 |
+| REP-008 | Cash-flow activity classification | Every account carries one class: CASH, OPERATING, INVESTING, FINANCING, or NON_CASH. The starter chart is seeded with the owner's classification, and the class is editable on the account form. New equity accounts default to FINANCING and all other new accounts default to OPERATING. | T-418, T-419 |
+| REP-009 | Statement labels and full names | Report tabs show the abbreviations SOCI, SOE, SOFP, SOCF, and TB. Hovering or keyboard-focusing a tab shows the full statement name, and the full name is also the tab's accessible label. Statement headings use full names. | T-421 |
+| REP-010 | Live-app print and Save as PDF | The live app prints the active statement or all four statements through the browser print dialog, with a letterhead, the full statement names, and the ledger name. Print output omits navigation, banners, controls, and error states. | T-421 |
+| REP-011 | Demo PDF preview | The public demo never creates or downloads a PDF. Its PDF action opens a clearly labeled simulated preview with a disabled Save as PDF button and states that no file is created or downloaded. | T-422 |
 
 
 ## User interface
@@ -55,7 +61,7 @@ Single source of truth for requirements and acceptance criteria. Task mappings r
 | UI-001 | Application shell and navigation | Sidebar on desktop and hamburger drawer on mobile provide Dashboard, Chart of Accounts, Business Transactions, General Journal, Adjustments, and Reports. A ledger switcher and a "Lock now" control appear in the sidebar. Active state, keyboard operation, Escape-to-close, and focus return work. | T-101, T-108, T-406 |
 | UI-002 | Dashboard | Shows personalized greeting, workspace name, financial summary, trial-balance totals, recent entries, and quick actions. All figures derive from posted journal lines returned by the API; none are hardcoded into the view. | T-103, T-208 |
 | UI-003 | Chart of Accounts list | Groups accounts by the five categories; supports search, category/status filters, balances, and an empty state. | T-104 |
-| UI-004 | Chart of Accounts editor | Add/edit code, name, category, description, and active status. New accounts prefill the next unused code in the selected category (starting at that category's minimum) while remaining editable. Code uniqueness and category hundred-series ranges are validated. Accounts cannot be hard-deleted. | T-104, T-305 |
+| UI-004 | Chart of Accounts editor | Add/edit code, name, category, description, cash-flow activity, and active status. New accounts prefill the next unused code in the selected category (starting at that category's minimum) while remaining editable. Code uniqueness and category hundred-series ranges are validated. Accounts cannot be hard-deleted. | T-104, T-305, T-419 |
 | UI-005 | Business Transactions list | Shows date, type, reference, description, amount, and status; supports search and type/status filters. | T-105 |
 | UI-006 | Transaction editor | Supports Sales Invoice, Purchase Bill, Cash Receipt, Cash Payment, and General Journal; dynamic debit/credit rows; running totals; draft save; clear validation. | T-105 |
 | UI-007 | General Journal view | Chronological entries with date, entry number, source, memo, debit/credit totals, and status. Rows expand to show lines. Supports status/type filters. | T-106 |
@@ -89,7 +95,8 @@ Single source of truth for requirements and acceptance criteria. Task mappings r
 | ACC-015 | Account lifecycle | Deactivation blocks new use and posting but preserves historical posted lines. Reactivation is allowed. | T-104, T-204 |
 | ACC-016 | Accounting equation | Dashboard displays Assets = Liabilities + Equity + Net income from posted data with a check indicator. | T-103, T-208 |
 | ACC-017 | Dates and ordering | Entry dates must be valid. Journal ordering is date descending, then entry number. Future dates are not restricted. | T-106, T-206 |
-| ACC-018 | Deferred accounting scope | Period close, automated adjustment schedules, multi-currency conversion, exports, tax/VAT, and statutory rules remain deferred. **Stage 3 note:** the trial balance, income statement, and balance sheet are now implemented as read-only reports (REP-001..005); period close is still not implemented. | T-408, explicit deferral |
+| ACC-018 | Deferred accounting scope | Period close, automated adjustment schedules, multi-currency conversion, exports, tax/VAT, and statutory rules remain deferred. **Stage 3 note:** the trial balance and the four financial statements are now implemented as read-only reports (REP-001..011); period close is still not implemented. | T-408, T-417, T-420, explicit deferral |
+| ACC-019 | Cash-flow activity rules | Operating activities cover customers, suppliers, rent, salaries, and utilities. Investing activities cover company investments such as equipment and supplies. Financing activities cover owner capital, drawings, and loan proceeds or payments. Non-cash movements such as depreciation never appear in the cash-flow statement. | T-418, T-419 |
 
 ## Database (Stage 2)
 

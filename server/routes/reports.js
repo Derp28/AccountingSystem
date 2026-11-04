@@ -1,7 +1,9 @@
 import express from "express";
 import {
   getBalanceSheet,
+  getCashFlows,
   getIncomeStatement,
+  getOwnerEquity,
   getTrialBalance,
 } from "../services/reports.js";
 
@@ -31,6 +33,26 @@ export function reportRoutes(db) {
     res.json(
       getBalanceSheet(db, req.ledgerId, {
         asOf: req.query.asOf,
+        basis: req.query.basis,
+      }),
+    );
+  });
+
+  router.get("/owner-equity", (req, res) => {
+    res.json(
+      getOwnerEquity(db, req.ledgerId, {
+        from: req.query.from,
+        to: req.query.to,
+        basis: req.query.basis,
+      }),
+    );
+  });
+
+  router.get("/cash-flows", (req, res) => {
+    res.json(
+      getCashFlows(db, req.ledgerId, {
+        from: req.query.from,
+        to: req.query.to,
         basis: req.query.basis,
       }),
     );

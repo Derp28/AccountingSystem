@@ -2852,3 +2852,373 @@ dialog.modal::backdrop {
   }
 }
 
+
+/* Statement tabs, tooltips, and print/PDF presentation */
+
+.report-tab {
+  position: relative;
+}
+
+.report-tab[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 40;
+  max-width: 240px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  transform: translateY(3px);
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.report-tab[data-tooltip]:nth-child(n + 4)::after {
+  right: 0;
+  left: auto;
+}
+
+.report-tab[data-tooltip]:hover::after,
+.report-tab[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.report-tab:focus-visible {
+  outline: 2px solid var(--green-700);
+  outline-offset: 2px;
+}
+
+.statement-abbr {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
+
+.report-formula {
+  margin-left: 8px;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.report-subline td {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.report-subline .account-code {
+  opacity: 0.7;
+}
+
+.report-demo-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -6px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Simulated PDF preview used by the static demo. No file is produced. */
+
+.pdf-preview {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #e9e6df;
+}
+
+.pdf-preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: #2f3338;
+  color: #f4f1ea;
+  font-size: 11.5px;
+}
+
+.pdf-preview-dots {
+  display: inline-flex;
+  flex: none;
+  gap: 5px;
+}
+
+.pdf-preview-dots i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a8f95;
+}
+
+.pdf-preview-dots i:first-child {
+  background: #e07a6f;
+}
+
+.pdf-preview-dots i:nth-child(2) {
+  background: #d9b25f;
+}
+
+.pdf-preview-dots i:nth-child(3) {
+  background: #7fae86;
+}
+
+.pdf-preview-filename {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-preview-badge {
+  flex: none;
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pdf-preview-scroll {
+  max-height: 62vh;
+  overflow: auto;
+  padding: 18px;
+}
+
+.pdf-preview-page {
+  max-width: 680px;
+  margin: 0 auto 18px;
+}
+
+.pdf-preview-sheet {
+  padding: 30px 34px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(20, 20, 20, 0.16);
+}
+
+.pdf-preview-page-number {
+  margin-top: 8px;
+  color: #6d6a63;
+  font-size: 10.5px;
+  text-align: center;
+}
+
+.pdf-preview-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pdf-preview-sheet .statement-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pdf-preview-sheet .card-header,
+.pdf-preview-sheet .report-section,
+.pdf-preview-sheet .report-total,
+.pdf-preview-sheet .card-footer {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.pdf-preview-sheet .report-total {
+  background: transparent;
+}
+
+.pdf-preview-sheet .print-letterhead,
+.pdf-preview-sheet .statement-abbr,
+.pdf-preview-sheet .check-chip {
+  display: none !important;
+}
+
+/* Print and Save as PDF */
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 14mm 16mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .sidebar,
+  .mobile-bar,
+  .prototype-banner,
+  .demo-banner,
+  .skip-link,
+  .toast-region,
+  .page-header,
+  .report-controls,
+  .report-demo-note,
+  .report-loading,
+  .modal,
+  .noscript {
+    display: none !important;
+  }
+
+  .main-content {
+    max-width: none;
+    padding: 0;
+  }
+
+  .reports-page {
+    display: block;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .statement-card {
+    break-after: page;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .statement-card:last-child {
+    break-after: auto;
+  }
+
+  .card-header {
+    padding: 0 0 10px;
+  }
+
+  .card-title {
+    font-size: 18pt;
+  }
+
+  .card-subtitle {
+    font-size: 9.5pt;
+  }
+
+  .statement-abbr {
+    display: none;
+  }
+
+  .check-chip {
+    border: 1px solid #bbb;
+    background: transparent !important;
+    color: #222 !important;
+  }
+
+  .report-section {
+    padding: 2px 0 8px;
+  }
+
+  .report-total {
+    padding: 10px 0;
+    background: transparent;
+  }
+
+  .card-footer {
+    padding: 8px 0 0;
+  }
+
+  .data-table {
+    font-size: 9.5pt;
+  }
+
+  .data-table thead {
+    display: table-header-group;
+  }
+
+  .data-table tr,
+  .report-section,
+  .report-total {
+    break-inside: avoid;
+  }
+
+  .table-wrap {
+    overflow: visible;
+  }
+
+  .print-letterhead {
+    display: flex !important;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #999;
+    color: #333;
+    font-size: 9pt;
+  }
+
+  .print-letterhead-brand {
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+
+  .print-letterhead-meta {
+    margin-left: auto;
+    color: #666;
+  }
+
+  body.is-print-all .app-frame {
+    display: none !important;
+  }
+
+  body.is-print-all #print-all {
+    display: block !important;
+  }
+
+  #print-all {
+    display: none;
+  }
+}
+
+.flow-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}

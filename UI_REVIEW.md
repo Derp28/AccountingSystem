@@ -74,8 +74,12 @@ Screenshots at the required widths now include the Reports page:
 - [x] “Lock now” shows the sign-in screen (not first-run setup); a wrong password shows a generic error.
 - [x] The sidebar exposes a ledger switcher and a New ledger action; switching changes the active ledger.
 - [x] A new ledger receives its own seeded Chart of Accounts and starts with no entries.
-- [x] The Reports page shows trial balance, income statement, and balance sheet on a shared adjusted/unadjusted toggle.
-- [x] Zero-balance accounts are hidden; the balance sheet shows a computed accumulated-earnings line and a balanced indicator.
+- [x] The Reports page shows the Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and a supporting trial balance on a shared adjusted/unadjusted toggle.
+- [x] Report tabs show only SOCI/SOE/SOFP/SOCF/TB; hovering or keyboard-focusing a tab shows the full statement name, and full names are used in accessible labels and statement headings.
+- [x] The live app prints the active statement or all four statements through the browser's Print / Save as PDF dialog, with a letterhead and without application chrome.
+- [x] The public demo's PDF action opens a clearly labeled simulated preview with a disabled Save as PDF button and says that no file is created or downloaded.
+- [x] Cash-flow activity is editable on the account form; the starter chart classifies equipment and supplies as investing, cash accounts as cash, and depreciation as non-cash.
+- [x] Zero-balance accounts are hidden; the SOFP shows a computed accumulated-earnings line and a balanced indicator.
 - [x] Desktop, tablet, and mobile layouts remain usable; no console errors.
 - [ ] **User approval of the Stage 3 UI** — pending.
 

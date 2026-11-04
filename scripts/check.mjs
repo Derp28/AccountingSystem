@@ -93,6 +93,7 @@ const requiredFiles = [
   "migrations/004_sequential_seed_codes.sql",
   "migrations/005_local_auth_multi_ledger.sql",
   "migrations/006_starter_chart.sql",
+  "migrations/007_cash_flow_classes.sql",
   "scripts/reset-password.mjs",
   "scripts/build-demo.mjs",
   "demo/books.js",
@@ -260,6 +261,7 @@ const accountRangeSql = readProject("migrations/003_account_code_ranges.sql");
 const sequentialSeedSql = readProject("migrations/004_sequential_seed_codes.sql");
 const authSql = readProject("migrations/005_local_auth_multi_ledger.sql");
 const starterChartSql = readProject("migrations/006_starter_chart.sql");
+const cashFlowSql = readProject("migrations/007_cash_flow_classes.sql");
 
 // ---------------------------------------------------------------------------
 // Starter Chart of Accounts: the same chart seeds new ledgers and upgrades the
@@ -341,6 +343,63 @@ if (
   pass("migration 006 replaces the seeded chart only while that ledger has no entries");
 } else {
   fail("migration 006 must guard the replacement on the seeded ledger having no entries");
+}
+
+// ---------------------------------------------------------------------------
+// Cash-flow classification: every account carries one class, and the starter
+// chart follows the owner's rule (equipment/supplies investing, equity/loans
+// financing, depreciation non-cash).
+// ---------------------------------------------------------------------------
+const cashFlowClasses = ["CASH", "OPERATING", "INVESTING", "FINANCING", "NON_CASH"];
+const invalidCashFlowClasses = DEFAULT_ACCOUNTS.filter(
+  (account) => !cashFlowClasses.includes(account.cashFlowClass),
+);
+if (invalidCashFlowClasses.length === 0) {
+  pass("every starter account has a valid cash-flow class");
+} else {
+  fail(
+    `invalid cash-flow classes: ${invalidCashFlowClasses
+      .map((account) => `${account.code}=${account.cashFlowClass}`)
+      .join(", ")}`,
+  );
+}
+
+const expectedCashFlowClasses = {
+  100: "CASH",
+  102: "INVESTING",
+  103: "INVESTING",
+  104: "NON_CASH",
+  201: "FINANCING",
+  300: "FINANCING",
+  301: "FINANCING",
+};
+const cashFlowDrift = DEFAULT_ACCOUNTS.filter((account) => {
+  const expected = expectedCashFlowClasses[account.code] || "OPERATING";
+  return account.cashFlowClass !== expected;
+});
+if (cashFlowDrift.length === 0) {
+  pass("starter chart classifies cash, investing, non-cash, and financing accounts");
+} else {
+  fail(
+    `starter cash-flow classes drifted: ${cashFlowDrift
+      .map((account) => `${account.code}=${account.cashFlowClass}`)
+      .join(", ")}`,
+  );
+}
+
+if (
+  /ADD COLUMN cash_flow_class TEXT NOT NULL DEFAULT 'OPERATING'/.test(cashFlowSql) &&
+  /CHECK \(cash_flow_class IN \('CASH', 'OPERATING', 'INVESTING', 'FINANCING', 'NON_CASH'\)\)/.test(
+    cashFlowSql,
+  ) &&
+  /SET cash_flow_class = 'CASH'/.test(cashFlowSql) &&
+  /SET cash_flow_class = 'INVESTING'/.test(cashFlowSql) &&
+  /SET cash_flow_class = 'NON_CASH'/.test(cashFlowSql) &&
+  /SET cash_flow_class = 'FINANCING'/.test(cashFlowSql)
+) {
+  pass("migration 007 adds a constrained cash-flow class and classifies the starter chart");
+} else {
+  fail("migration 007 is missing the cash-flow column, constraint, or starter classifications");
 }
 const connectionSource = readProject("server/db/connection.js");
 const securitySource = readProject("server/middleware/security.js");
@@ -561,6 +620,122 @@ if (
   fail("reports service or routes are incomplete");
 }
 
+const validationSource = readProject("server/lib/validation.js");
+const accountsService = readProject("server/services/accounts.js");
+if (
+  /CASH_FLOW_CLASSES/.test(validationSource) &&
+  /defaultCashFlowClass/.test(validationSource) &&
+  /EQUITY" \? "FINANCING" : "OPERATING"/.test(validationSource) &&
+  /Only asset accounts can be marked as cash accounts/.test(validationSource) &&
+  /cash_flow_class/.test(accountsService) &&
+  /input\.cashFlowClass/.test(accountsService)
+) {
+  pass("account validation and persistence carry the cash-flow class, defaulting equity to financing");
+} else {
+  fail("cash-flow class validation or account persistence is incomplete");
+}
+
+if (
+  /getOwnerEquity/.test(reportsService) &&
+  /getCashFlows/.test(reportsService) &&
+  /postedFilter/.test(reportsService) &&
+  /periodLines/.test(reportsService) &&
+  /cash_flow_class === "CASH"/.test(reportsService) &&
+  /reconciled: differenceCents === 0/.test(reportsService) &&
+  /owner-equity/.test(reportsRoute) &&
+  /cash-flows/.test(reportsRoute) &&
+  /getOwnerEquity/.test(reportsRoute) &&
+  /getCashFlows/.test(reportsRoute)
+) {
+  pass("reports service and routes implement owner's equity and reconciled cash flows");
+} else {
+  fail("owner's equity or cash-flow reports are incomplete");
+}
+
+if (
+  /ownerEquity: \(params\) => request\(`\/api\/reports\/owner-equity/.test(clientApi) &&
+  /cashFlows: \(params\) => request\(`\/api\/reports\/cash-flows/.test(clientApi)
+) {
+  pass("client API exposes the owner's equity and cash-flow endpoints");
+} else {
+  fail("client API is missing the owner's equity or cash-flow endpoint");
+}
+
+const reportsView = readProject("public/js/views/reports.js");
+const reportTabLabels = ["SOCI", "SOE", "SOFP", "SOCF", "TB"];
+const missingTabLabels = reportTabLabels.filter(
+  (label) => !reportsView.includes(`label: "${label}"`),
+);
+const missingStatementNames = [
+  "Statement of Comprehensive Income",
+  "Statement of Owner's Equity",
+  "Statement of Financial Position",
+  "Statement of Cash Flows",
+].filter((name) => !reportsView.includes(name));
+if (
+  missingTabLabels.length === 0 &&
+  missingStatementNames.length === 0 &&
+  /data-tooltip=/.test(reportsView) &&
+  /aria-label=/.test(reportsView) &&
+  /report-owner-equity/.test(reportsView) &&
+  /report-financial-position/.test(reportsView) &&
+  /report-cash-flows/.test(reportsView) &&
+  /report-net-change/.test(reportsView) &&
+  /report-ending-cash/.test(reportsView)
+) {
+  pass("reports view renders SOCI, SOE, SOFP, SOCF tabs with abbreviations and full-name tooltips");
+} else {
+  fail(
+    `reports view is missing statement tabs or tooltips (labels: ${missingTabLabels.join(", ") || "ok"}; names: ${
+      missingStatementNames.join(", ") || "ok"
+    })`,
+  );
+}
+
+const appCss = readProject("public/css/app.css");
+if (
+  /@media print/.test(appCss) &&
+  /\.print-only/.test(appCss) &&
+  /\.print-letterhead/.test(appCss) &&
+  /body\.is-print-all #print-all/.test(appCss) &&
+  /\.report-tab\[data-tooltip\]:hover::after/.test(appCss) &&
+  /\.report-tab\[data-tooltip\]:focus-visible::after/.test(appCss) &&
+  /\.pdf-preview-sheet/.test(appCss)
+) {
+  pass("print/PDF CSS, tab tooltips, and the simulated preview layout are present");
+} else {
+  fail("print/PDF CSS or tab tooltip styles are incomplete");
+}
+
+if (
+  /openPdfPreview/.test(reportsView) &&
+  /Simulated preview/.test(reportsView) &&
+  /No file is created or downloaded/.test(reportsView) &&
+  /isDemoMode/.test(reportsView) &&
+  /window\.print\(\)/.test(reportsView)
+) {
+  pass("reports view uses browser print in the live app and a simulated preview in the demo");
+} else {
+  fail("reports view does not separate live printing from the demo preview");
+}
+
+const reportsIntegration = readProject("tests/integration/reports.test.js");
+const reportsE2e = readProject("tests/e2e/reports.spec.js");
+if (
+  /getOwnerEquity/.test(reportsIntegration) &&
+  /getCashFlows/.test(reportsIntegration) &&
+  /transfers between cash accounts/.test(reportsIntegration) &&
+  /owner-equity/.test(reportsE2e) &&
+  /cash-flows/.test(reportsE2e) &&
+  /report-financial-position/.test(reportsE2e) &&
+  /emulateMedia\(\{ media: "print" \}\)/.test(reportsE2e) &&
+  /page\.pdf\(/.test(reportsE2e)
+) {
+  pass("integration and E2E tests cover the new statements, reconciliation, and print/PDF output");
+} else {
+  fail("statement integration or E2E coverage is incomplete");
+}
+
 if (
   /node:24/.test(dockerfile) &&
   /USER node/.test(dockerfile) &&
@@ -611,6 +786,34 @@ if (demoSeed.entries.length >= 8 && demoSeed.ledgers.length >= 2 && demoSeed.acc
   );
 } else {
   fail("demo seed is too small to demonstrate the app; rerun npm run demo:build");
+}
+
+if (demoSeed.accounts.every((account) => cashFlowClasses.includes(account.cashFlowClass))) {
+  pass("every demo account carries a valid cash-flow class");
+} else {
+  fail("demo seed has an account without a valid cash-flow class; rerun npm run demo:build");
+}
+
+if (
+  /cashFlowClass/.test(demoApi) &&
+  /getOwnerEquity/.test(demoApi) &&
+  /getCashFlows/.test(demoApi) &&
+  /owner-equity/.test(demoApi) &&
+  /cash-flows/.test(demoApi)
+) {
+  pass("demo engine mirrors the cash-flow class and the owner's equity/cash-flow routes");
+} else {
+  fail("demo engine is missing the new reports or cash-flow classification");
+}
+
+if (
+  /__LEDGERLINE_DEMO__ = true/.test(demoMain) &&
+  /focusDemoReports/.test(demoMain) &&
+  /setReportFilter/.test(demoMain)
+) {
+  pass("demo marks itself as simulated and points the reports at the sample period");
+} else {
+  fail("demo mode flag or sample-period defaults are missing");
 }
 
 const unbalancedSeed = demoSeed.entries.filter(

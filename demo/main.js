@@ -1,6 +1,10 @@
 import { createDemoState, handleDemoRequest } from "./api.js";
 import { seed } from "./seed.js";
 
+// Resolved after the build copies public/js next to the demo, so it cannot be a
+// static import from this source tree.
+const { setReportFilter } = await import("../js/state.js");
+
 /**
  * Interactive demo entry point for the GitHub Pages site.
  *
@@ -57,6 +61,29 @@ function installDemoApi() {
   };
 }
 
+/**
+ * The sample books are historical, so point the report controls at the posted
+ * data instead of the current month. Without this, the first visit to Reports
+ * would show an empty period for the 2023 sample entries.
+ */
+function focusDemoReports() {
+  const dates = seed.entries
+    .filter(
+      (entry) =>
+        entry.status === "POSTED" &&
+        entry.date &&
+        (!seed.activeLedgerId || entry.ledgerId === seed.activeLedgerId),
+    )
+    .map((entry) => entry.date)
+    .sort();
+  if (!dates.length) return;
+  setReportFilter({
+    from: dates[0],
+    to: dates[dates.length - 1],
+    asOf: dates[dates.length - 1],
+  });
+}
+
 function mountDemoBanner() {
   const banner = document.createElement("aside");
   banner.className = "demo-banner";
@@ -66,7 +93,7 @@ function mountDemoBanner() {
     <span>
       Sample books from the real Ledgerline app, running entirely in your browser.
       Changes last until you reload, and nothing is sent anywhere.
-      The sign-in screen accepts any password.
+      The sign-in screen accepts any password. PDF previews are simulated; no file is downloaded.
     </span>
     <a href="https://github.com/Derp28/AccountingSystem#run-from-source">Run it locally for real persistence</a>
   `;
@@ -76,4 +103,6 @@ function mountDemoBanner() {
 
 installDemoApi();
 mountDemoBanner();
+focusDemoReports();
+window.__LEDGERLINE_DEMO__ = true;
 await import("../js/app.js");

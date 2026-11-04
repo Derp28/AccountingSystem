@@ -24,6 +24,12 @@ export const ADJUSTMENT_TYPES = [
   "DEPRECIATION",
   "OTHER",
 ];
+export const CASH_FLOW_CLASSES = ["CASH", "OPERATING", "INVESTING", "FINANCING", "NON_CASH"];
+
+/** Equity is financing by nature; every other new account starts operating. */
+export function defaultCashFlowClass(category) {
+  return String(category || "").toUpperCase() === "EQUITY" ? "FINANCING" : "OPERATING";
+}
 
 export function isValidIsoDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
@@ -81,6 +87,9 @@ export function normalizeAccountInput(body) {
   const category = text(body?.category).toUpperCase();
   const description = text(body?.description);
   const active = body?.active === undefined ? true : Boolean(body.active);
+  const cashFlowClass = (
+    text(body?.cashFlowClass) || defaultCashFlowClass(category)
+  ).toUpperCase();
   const errors = [];
 
   if (!code) push(errors, "code", "Account code is required.");
@@ -103,9 +112,14 @@ export function normalizeAccountInput(body) {
   else if (name.length > 80) push(errors, "name", "Account name must be 80 characters or fewer.");
   if (!CATEGORIES.includes(category)) push(errors, "category", "Choose an account category.");
   if (description.length > 200) push(errors, "description", "Description must be 200 characters or fewer.");
+  if (!CASH_FLOW_CLASSES.includes(cashFlowClass)) {
+    push(errors, "cashFlowClass", "Choose a cash flow activity.");
+  } else if (cashFlowClass === "CASH" && category !== "ASSET") {
+    push(errors, "cashFlowClass", "Only asset accounts can be marked as cash accounts.");
+  }
 
   if (errors.length) throw new ValidationError(errors);
-  return { code, name, category, description, active };
+  return { code, name, category, description, active, cashFlowClass };
 }
 
 export function normalizeEntryInput(body, { forPost = false, accounts = [] } = {}) {

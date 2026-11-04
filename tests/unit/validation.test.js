@@ -55,6 +55,7 @@ test("account input normalizes and validates", () => {
     category: "EXPENSE",
     description: "Subscriptions",
     active: true,
+    cashFlowClass: "OPERATING",
   });
   assert.throws(() => normalizeAccountInput({ code: "", name: "x", category: "ASSET" }), /required/);
   assert.throws(
@@ -80,6 +81,40 @@ test("account input normalizes and validates", () => {
   assert.throws(
     () => normalizeAccountInput({ code: "100", name: "x", category: "NOPE" }),
     /category/,
+  );
+  assert.equal(
+    normalizeAccountInput({ code: "310", name: "Capital", category: "EQUITY" })
+      .cashFlowClass,
+    "FINANCING",
+  );
+  assert.equal(
+    normalizeAccountInput({
+      code: "106",
+      name: "Petty cash",
+      category: "ASSET",
+      cashFlowClass: "CASH",
+    }).cashFlowClass,
+    "CASH",
+  );
+  assert.throws(
+    () =>
+      normalizeAccountInput({
+        code: "210",
+        name: "Loan",
+        category: "LIABILITY",
+        cashFlowClass: "CASH",
+      }),
+    /cash accounts/,
+  );
+  assert.throws(
+    () =>
+      normalizeAccountInput({
+        code: "107",
+        name: "Cash",
+        category: "ASSET",
+        cashFlowClass: "NOPE",
+      }),
+    /cash flow activity/,
   );
 });
 
