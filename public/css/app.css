@@ -929,6 +929,17 @@ svg {
   color: #ffd7d1;
 }
 
+/* Statement cards sit on light paper, so the status chip needs dark ink. */
+.statement-card .check-chip {
+  background: var(--green-100);
+  color: var(--green-800);
+}
+
+.statement-card .check-chip.is-bad {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
 .quick-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2330,6 +2341,7 @@ dialog.modal::backdrop {
     top: 0;
     bottom: 0;
     left: 0;
+    z-index: 80;
     width: min(310px, 86vw);
     height: 100vh;
     transform: translateX(-104%);
@@ -2348,7 +2360,7 @@ dialog.modal::backdrop {
   .nav-overlay {
     position: fixed;
     inset: 0;
-    z-index: 55;
+    z-index: 75;
     display: block;
     border: 0;
     background: rgba(16, 42, 32, 0.48);

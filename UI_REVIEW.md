@@ -2,18 +2,19 @@
 
 **Stage 1 status:** Approved by the user on 2026-10-20.
 **Stage 2 status:** UI approved and final product signoff accepted by the user on 2026-10-20.
-**Stage 3 status:** Implemented and automatically verified on 2026-10-21; **awaiting user UI review**. Not yet approved.
-**Build:** Stage 3 local Express + SQLite app using the approved Stage 1/2 visual system, adding local access screens, a ledger switcher, and a Reports page.
-**Reviewer:** User approved the Stage 1 and Stage 2 UI; automated evidence was produced by the implementation team.
+**Stage 3 status:** Implemented and automatically verified on 2026-11-02; UI review fixes applied 2026-11-04. **Awaiting user UI review. Not yet approved.**
+**Build:** Stage 3 local Express + SQLite app using the approved Stage 1/2 visual system, adding local access screens, a ledger switcher, and a Reports page with the Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and a supporting trial balance, plus browser print/PDF.
+**Reviewer:** User approved the Stage 1 and Stage 2 UI. The implementation team produced the Stage 3 automated evidence and performed the 2026-11-04 UI review; user approval remains the gate.
 
 ## Launch
 
-```bash
-cd /home/derp_28/accounting-app
-./scripts/dev.sh
+From this project folder, with Windows Node.js 24 or newer:
+
+```powershell
+npm start
 ```
 
-Open `http://127.0.0.1:3000`.
+Open `http://127.0.0.1:3000`. Use `npm run dev` for the auto-restarting development server. The app requires a local username/password; the first run shows the claim screen.
 
 The database is `data/accounting.sqlite`. It is created on first launch and persists across restarts. The E2E suite uses `data/e2e.sqlite` on port 3100 and must not be confused with the real local database.
 
@@ -30,9 +31,9 @@ The database is `data/accounting.sqlite`. It is created on first launch and pers
 
 ## Stage 2 automated UI evidence
 
-Command: `bash scripts/test-e2e.sh`
+Command: `npm run test:e2e`
 
-Result: **5/5 passed** (critical path, settings rename, mobile navigation, XSS, screenshots). The critical path starts at 390 px, verifies that Step 2 is full-screen with no open dialog and that the setup card fits above the fold, then continues at 1280 px. See `TEST_PLAN.md` for exact coverage.
+Result: **5/5 passed at the Stage 2 gate** (critical path, settings rename, mobile navigation, XSS, screenshots). The critical path starts at 390 px, verifies that Step 2 is full-screen with no open dialog and that the setup card fits above the fold, then continues at 1280 px. See `TEST_PLAN.md` for exact coverage.
 
 Screenshots at the required widths:
 
@@ -51,14 +52,24 @@ The browser run also asserts no page errors, no page-level horizontal overflow a
 - A **sign-in screen** appears when the install is locked or signed out. It keeps the same ledger-paper styling and shows the local-only privacy note.
 - The sidebar gains a **ledger switcher** (`Ledger` select) and a **Lock now** control. A **New ledger** action opens the existing modal pattern for name and currency.
 - Settings gains **Lock now** and **Sign out** actions and renames “workspace” wording to “ledger” where it refers to the active set of books.
-- A new **Reports** page (`/reports`) adds three tabs — Trial balance, Income statement, Balance sheet — with a shared **Adjusted / Unadjusted** toggle, as-of/period date inputs, and a Refresh control. All three pages keep the ledger-paper card design.
+- A new **Reports** page (`/reports`) adds five abbreviated tabs — SOCI, SOE, SOFP, SOCF, and a supporting TB — with full statement names on hover/focus and in accessible labels and headings. The four statements and the trial balance share an **Adjusted / Unadjusted** basis toggle, as-of/period date inputs, and a Refresh control, and keep the ledger-paper card design.
+- **Cash-flow activity** is editable on the account form. The starter chart classifies cash accounts as cash, equipment and supplies as investing, accumulated depreciation as non-cash, and equity/notes as financing.
+- The live app prints the active statement or all four statements through the browser's **Print / Save as PDF** dialog, with a letterhead and without application chrome.
+- The public demo at <https://derp28.github.io/AccountingSystem/> runs the same UI against an in-memory engine. It cannot persist data, resets on reload, says so, and shows a labeled simulated PDF preview instead of creating a file.
 - The dashboard trial-balance card links to the Reports page.
 
 ## Stage 3 automated UI evidence
 
-Command: `bash scripts/test-e2e.sh`
+Command: `npm run test:e2e`
 
-Result: **9/9 passed** (claim/sign-in/lock, ledger switching, critical path, rename, mobile navigation, reports, XSS, screenshots). The claim screen is checked at 390 px for fit and inline validation. See `TEST_PLAN.md` for exact coverage.
+Result: **9/9 passed** (claim/sign-in/lock, ledger switching, critical path, rename, mobile navigation, reports, XSS, screenshots). The claim screen is checked at 390 px for fit and inline validation. The 2026-11-04 run also passed **232/232 static checks** and **41/41 backend tests** after the review fixes. See `TEST_PLAN.md` for exact coverage.
+
+The 2026-11-04 UI review found and fixed two presentation defects in the live UI:
+
+- The report status chip was light-on-light on the statement cards; it now uses dark green ink on a light green pill (computed `rgb(31, 77, 58)` on `rgb(226, 238, 230)`), with a red variant for a failed check.
+- The mobile drawer's close button sat beneath the persistent banner at scroll top; the drawer and its backdrop now layer above the banner, so the close button is visible and clickable, and the drawer still closes with Escape.
+
+The report body is now exposed as a labelled `tabpanel` (`role="tabpanel"`, `aria-labelledby` pointing at the active tab). The demo was rebuilt and the screenshots were regenerated; no page errors were recorded.
 
 Screenshots at the required widths now include the Reports page:
 
@@ -76,12 +87,20 @@ Screenshots at the required widths now include the Reports page:
 - [x] A new ledger receives its own seeded Chart of Accounts and starts with no entries.
 - [x] The Reports page shows the Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and a supporting trial balance on a shared adjusted/unadjusted toggle.
 - [x] Report tabs show only SOCI/SOE/SOFP/SOCF/TB; hovering or keyboard-focusing a tab shows the full statement name, and full names are used in accessible labels and statement headings.
+- [x] The report body is a labelled `tabpanel` linked to the active tab.
+- [x] Report status chips are readable on the light statement cards, including the long “Ties to the balance sheet” label.
 - [x] The live app prints the active statement or all four statements through the browser's Print / Save as PDF dialog, with a letterhead and without application chrome.
 - [x] The public demo's PDF action opens a clearly labeled simulated preview with a disabled Save as PDF button and says that no file is created or downloaded.
 - [x] Cash-flow activity is editable on the account form; the starter chart classifies equipment and supplies as investing, cash accounts as cash, and depreciation as non-cash.
 - [x] Zero-balance accounts are hidden; the SOFP shows a computed accumulated-earnings line and a balanced indicator.
-- [x] Desktop, tablet, and mobile layouts remain usable; no console errors.
+- [x] Desktop, tablet, and mobile layouts remain usable; the mobile drawer's close button is reachable at scroll top; no console errors.
 - [ ] **User approval of the Stage 3 UI** — pending.
+
+### Minor observations (non-blocking)
+
+- The demo repeats its non-persistence notice in the demo banner and the sidebar, and retains a small “Local” pill. The wording is accurate but could be tightened in a later polish pass.
+- Report tabs support Tab/Shift+Tab and Enter/Space, but not arrow-key roving focus.
+- The Reports page still opens on the supporting trial balance by default, preserving the Stage 2 landing state; the four statements are one click away.
 
 ## Stage 1 approval record
 
@@ -139,10 +158,13 @@ The checklist below records the acceptance checks. Automated coverage is in `TES
 - Error states are practical server messages, not a full offline/conflict-resolution workflow.
 - Screenshots are synthetic E2E data and may include a keyboard focus ring on the page heading.
 - Automated accessibility coverage is targeted; no axe or screen-reader audit is claimed.
-- The Stage 3 UI has not yet been approved by the user.
+- Report tabs do not implement arrow-key roving focus; Tab/Shift+Tab and Enter/Space work, and the report body is a labelled tabpanel.
+- The Stage 3 UI has not yet been approved by the user; this review records the fixes and evidence for the user's decision.
 
 ## Feedback
 
 Stage 2 UI and final product scope were approved by the user on 2026-10-20. Accounting policies D-016, D-018, and D-019 were confirmed the same day; D-018 range enforcement is implemented and tested. After signoff, the user requested +1 per-category account codes; D-021 implements the sequential seed codes and editable next-code prefill, recorded above.
 
-**Stage 3 (2026-10-21):** the user requested a local username/password login, multiple ledgers under one local account, and unadjusted/adjusted trial balance, income statement, and balance sheet, distributed as source on GitHub plus self-hosted Docker/release copies with no public hosting. That scope is implemented, documented in `DECISIONS.md` (D-022..D-031), and automatically verified. **UI approval is the outstanding gate.**
+**Stage 3 (2026-10-21, extended 2026-11-02):** the user requested a local username/password login, multiple ledgers under one local account, the four adjusted/unadjusted financial statements plus a supporting trial balance, browser print/PDF, and self-hosted distribution. That scope is implemented, documented in `DECISIONS.md` (D-022..D-038), and automatically verified. The public demo is deployed at <https://derp28.github.io/AccountingSystem/>.
+
+**Stage 3 UI review (2026-11-04):** the implementation team reviewed the live app and the demo at desktop, tablet, and mobile widths. The review fixed the report-chip contrast and the mobile drawer close-button layering, added tabpanel semantics, rebuilt the demo, and reran 232 static checks, 41 backend tests, and 9 Playwright tests. **User approval of the Stage 3 UI is the outstanding gate.**

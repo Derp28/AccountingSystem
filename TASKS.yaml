@@ -538,6 +538,16 @@ tasks:
     status: done
     verification: "Executed in this folder on 2026-11-02: npm run check 232/232, npm test 41/41, npm run test:e2e 9/9, and npm run demo:build (16 entries, 2 ledgers, 34 accounts). The live data/accounting.sqlite was backed up to data/backups/pre-007-20261102/ and migrated to schema 7; the 17 starter accounts carry the expected cash-flow classes. Browser verification of the rebuilt demo covered the five report tabs, full-name tooltips, all four statement totals, and the simulated PDF previews. No new tax, VAT, statutory, period-close, or export rules were introduced."
 
+  - id: T-424
+    title: Stage 3 UI review, presentation fixes, and approval record
+    owner: Orchestrator + UI Agent
+    phase: 5
+    requirements: [UI-001, UI-010, UI-011, UI-012, UI-013, QA-010, QA-011]
+    depends_on: [T-423]
+    files: [public/css/app.css, public/js/views/reports.js, UI_REVIEW.md, TEST_PLAN.md, TASKS.yaml, screenshots]
+    status: done
+    verification: "2026-11-04 UI review of the live app and demo at 1440/768/390 px. Fixed the report status chip's light-on-light contrast (now dark green rgb(31,77,58) on light green rgb(226,238,230), with a red failure variant), layered the mobile drawer and backdrop above the persistent banner so the close button is reachable at scroll top, and exposed the report body as a labelled tabpanel. Rebuilt the demo (44 files; 16 entries, 2 ledgers, 34 accounts) and reran npm run check 232/232, npm test 41/41, and npm run test:e2e 9/9; screenshots regenerated. User UI approval remains the outstanding gate."
+
 gates:
   - id: GATE-0
     name: Discovery
@@ -558,7 +568,7 @@ gates:
   - id: GATE-4
     name: Stage 3 local access, multi-ledger, four financial statements, print/PDF, and distribution
     status: implemented_pending_ui_review
-    evidence: "Implementation and automated verification complete on 2026-11-02: 232/232 static checks, 41/41 backend tests (including a real restart with sessions), 9/9 Playwright tests, npm audit 0 vulnerabilities. Local auth with scrypt/sessions/CSRF/lockout, one account owning multiple ledgers with isolation triggers, and the four adjusted/unadjusted financial statements plus a supporting trial balance are implemented. Migration 007 adds per-account cash-flow classes; the live data/accounting.sqlite is at schema 7 after backups to data/backups/pre-006-20261027/ and data/backups/pre-007-20261102/. The live app prints through the browser print dialog; the demo shows a simulated PDF preview and creates no file. Docker/release packaging and docs are in place. The Stage 3 UI has NOT yet been reviewed or approved by the user."
+    evidence: "Implementation and automated verification complete on 2026-11-02: 232/232 static checks, 41/41 backend tests (including a real restart with sessions), 9/9 Playwright tests, npm audit 0 vulnerabilities. Local auth with scrypt/sessions/CSRF/lockout, one account owning multiple ledgers with isolation triggers, and the four adjusted/unadjusted financial statements plus a supporting trial balance are implemented. Migration 007 adds per-account cash-flow classes; the live data/accounting.sqlite is at schema 7 after backups to data/backups/pre-006-20261027/ and data/backups/pre-007-20261102/. The live app prints through the browser print dialog; the demo shows a simulated PDF preview and creates no file. Docker/release packaging and docs are in place. The 2026-11-04 UI review fixed the report-chip contrast and mobile drawer close-button layering, added tabpanel semantics, and reran 232/232 static checks, 41/41 backend tests, and 9/9 Playwright tests. The Stage 3 UI is ready for the user's decision; it has NOT yet been approved by the user."
   - id: GATE-5
     name: Public interactive demo on GitHub Pages
     status: passed

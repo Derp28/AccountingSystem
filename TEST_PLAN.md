@@ -14,7 +14,7 @@ Period close, exports, automated adjustment schedules, tax/VAT/statutory logic, 
 - E2E: `http://127.0.0.1:3100`, database `data/e2e.sqlite`
 - Browser: Playwright Chromium; `npm run test:e2e` launches `scripts/test-e2e.mjs` and `scripts/e2e-server.mjs`
 - SQLite: Node built-in `node:sqlite`
-- Date of the latest local evidence run: 2026-11-02; deployed-site check: 2026-11-04
+- Date of the latest local evidence run: 2026-11-04; deployed-site check: 2026-11-04
 
 ## Commands
 
@@ -235,6 +235,12 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-11-02 | Browser walkthrough of the rebuilt demo (`http://127.0.0.1:4174`, static `docs/`) | PASS | Five tabs and full-name tooltips; SOCI adjusted 44,300.00 − 18,850.00 = 25,450.00; SOE ending capital 122,450.00; SOFP 128,950.00 = 6,500.00 + 122,450.00; SOCF operating 25,300.00, investing (16,500.00), financing 97,000.00, net/ending cash 105,800.00; reports default to 2023-12-01..2023-12-31; Download PDF and Preview all open a simulated preview with a disabled Save as PDF and an explicit no-file note; account form shows Office Supplies preselected as Investing and saves a change. No application console errors |
 | 2026-11-02 | Screenshot evidence | PASS | `screenshots/` has 21 PNGs; the Playwright spec regenerated 19 (six pages at 1440/768/390 px plus mobile navigation), and the earlier setup-1440/setup-390 screenshots remain |
 | 2026-11-04 | GitHub Pages deployment of the four-statement demo | PASS | Pushed `b4fc6b1`; workflow run 41752716402 completed successfully and published `gh-pages` commit 3d030d8 ("Demo site from b4fc6b1..."). A fresh Playwright Chromium context loaded <https://derp28.github.io/AccountingSystem/?v=b4fc6b1#/reports> and saw the five abbreviated tabs with full accessible names, SOCI ₱25,450.00, SOE ending capital ₱122,450.00, SOFP ₱128,950.00, SOCF ending cash ₱105,800.00, and the simulated preview with a disabled Save as PDF and the no-file note. No page errors. |
+| 2026-11-04 | Stage 3 UI review | PASS | Live app at 390 px and demo at 1440/390 px: found the report status chip rendering light-on-light on the statement cards and the mobile drawer close button sitting under the persistent banner at scroll top. Fixed the chip to dark green `rgb(31, 77, 58)` on light green `rgb(226, 238, 230)` with a red failure variant; layered the drawer (z-index 80) and backdrop (75) above the banner (70); added `role="tabpanel"` and `aria-labelledby` linking the report body to the active tab. |
+| 2026-11-04 | `npm run check` after the UI review fixes | PASS, 232/232 | Static, schema, auth, report, print, and demo checks unchanged |
+| 2026-11-04 | `npm test` after the UI review fixes | PASS, 41/41 | Unit + integration, including the real restart and report invariants |
+| 2026-11-04 | `npm run test:e2e` after the UI review fixes | PASS, 9/9 | Auth, critical path, mobile drawer, reports/print, XSS, and screenshots; screenshots regenerated with the fixed chip and visible mobile close button |
+| 2026-11-04 | `npm run demo:build` after the UI review fixes | PASS, 44 files | 16 entries, 2 ledgers, 34 accounts; demo carries the contrast and tabpanel fixes |
+| 2026-11-04 | Browser verification of the UI review fixes | PASS | Demo chip computed `color: rgb(31, 77, 58)` on `background: rgb(226, 238, 230)`; live 390 px drawer's close button hit-tested and clicked at scroll top; `#report-body` reported `role="tabpanel"` with `aria-labelledby="report-tab-owner-equity"` and the accessible name "Statement of Owner's Equity"; no page errors |
 
 
 ## Known limitations
@@ -253,7 +259,8 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 - The Statement of Comprehensive Income equals net income because the app has no other comprehensive income items. The Statement of Owner's Equity uses the computed accumulated-earnings line from the balance sheet; the books are not closed.
 - The public demo's PDF preview is simulated. It creates no file and downloads nothing; only the self-hosted live app uses the browser's Print / Save as PDF dialog.
 - The demo's sample transactions are the owner's December 2023 set; the 11 December hiring agreement has no entry until payroll is recorded.
-- The Stage 3 UI has not yet been reviewed or approved by the user.
+- The Stage 3 UI has not yet been approved by the user. The 2026-11-04 review fixed the report-chip contrast and mobile drawer close-button layering and recorded the remaining minor observations in `UI_REVIEW.md`.
+- Report tabs support Tab/Shift+Tab and Enter/Space but not arrow-key roving focus; the report body is a labelled tabpanel.
 - Account codes are constrained to three-digit category hundred-series ranges by D-018; out-of-range codes are rejected by the API, UI, and database triggers.
 - Reversals use the approved D-019 policy: server current UTC date and `GENERAL_JOURNAL` source type.
 - Reversal of a posted entry whose account was later deactivated is allowed as the approved D-016 correction path.

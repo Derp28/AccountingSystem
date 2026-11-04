@@ -519,7 +519,7 @@ function controlsHtml(filters) {
         ${TABS.map(
           (tab) => `
             <button class="report-tab ${filters.tab === tab.id ? "is-active" : ""}" type="button"
-              role="tab" aria-selected="${filters.tab === tab.id}"
+              id="report-tab-${tab.id}" role="tab" aria-selected="${filters.tab === tab.id}"
               aria-label="${escapeHtml(tab.tooltip)}" aria-controls="report-body"
               data-tooltip="${escapeHtml(tab.tooltip)}" data-report-tab="${tab.id}">
               ${escapeHtml(tab.label)}
@@ -646,7 +646,8 @@ export function renderReports(container, state) {
             )} <span>Demo only: PDF previews are simulated; no file is created or downloaded.</span></p>`
           : ""
       }
-      <div id="report-body" aria-live="polite">
+      <div id="report-body" role="tabpanel" tabindex="0"
+        aria-labelledby="report-tab-${filters.tab}" aria-live="polite">
         <div class="card report-loading">Loading report…</div>
       </div>
     </div>
@@ -691,6 +692,7 @@ export function renderReports(container, state) {
 
   function rerenderControls() {
     controls.innerHTML = controlsHtml(filters);
+    body.setAttribute("aria-labelledby", `report-tab-${filters.tab}`);
     wireControls();
   }
 
