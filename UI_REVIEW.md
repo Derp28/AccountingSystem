@@ -69,7 +69,7 @@ The 2026-11-04 UI review found and fixed two presentation defects in the live UI
 - The report status chip was light-on-light on the statement cards; it now uses dark green ink on a light green pill (computed `rgb(31, 77, 58)` on `rgb(226, 238, 230)`), with a red variant for a failed check.
 - The mobile drawer's close button sat beneath the persistent banner at scroll top; the drawer and its backdrop now layer above the banner, so the close button is visible and clickable, and the drawer still closes with Escape.
 
-The report body is now exposed as a labelled `tabpanel` (`role="tabpanel"`, `aria-labelledby` pointing at the active tab). The demo was rebuilt and the screenshots were regenerated; no page errors were recorded.
+The report body is now exposed as a labelled `tabpanel` (`role="tabpanel"`, `aria-labelledby` pointing at the active tab). The demo was rebuilt and the screenshots were regenerated; no page errors were recorded. The review build was deployed on 2026-11-04 as commit `8895072` (workflow run 41755729378, `gh-pages` commit 615b618); a fresh Chromium context verified the five tabs, all four statement totals, the fixed chip, the tabpanel label, the simulated preview with no download, and the mobile drawer close button at scroll top.
 
 Screenshots at the required widths now include the Reports page:
 

@@ -241,6 +241,7 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-11-04 | `npm run test:e2e` after the UI review fixes | PASS, 9/9 | Auth, critical path, mobile drawer, reports/print, XSS, and screenshots; screenshots regenerated with the fixed chip and visible mobile close button |
 | 2026-11-04 | `npm run demo:build` after the UI review fixes | PASS, 44 files | 16 entries, 2 ledgers, 34 accounts; demo carries the contrast and tabpanel fixes |
 | 2026-11-04 | Browser verification of the UI review fixes | PASS | Demo chip computed `color: rgb(31, 77, 58)` on `background: rgb(226, 238, 230)`; live 390 px drawer's close button hit-tested and clicked at scroll top; `#report-body` reported `role="tabpanel"` with `aria-labelledby="report-tab-owner-equity"` and the accessible name "Statement of Owner's Equity"; no page errors |
+| 2026-11-04 | GitHub Pages deployment of the UI review fixes | PASS | Pushed `8895072`; workflow run 41755729378 succeeded and published `gh-pages` commit 615b618 ("Demo site from 8895072..."). A fresh Chromium context at <https://derp28.github.io/AccountingSystem/?v=8895072#/reports> verified the five tabs, SOCI ₱25,450.00, SOE ₱122,450.00, SOFP ₱128,950.00, SOCF ₱105,800.00, the chip computed `rgb(31, 77, 58)` on `rgb(226, 238, 230)`, the tabpanel label, the simulated preview with a disabled Save as PDF and no download, and a 390 px drawer whose close button hit-tests and closes. No page or console errors. |
 
 
 ## Known limitations
