@@ -151,7 +151,7 @@ Directory: `screenshots/`
 - `dashboard-390.png`, `accounts-390.png`, `transactions-390.png`, `journal-390.png`, `adjustments-390.png`, `reports-390.png`
 - `mobile-navigation-390.png`
 - `setup-1440.png`, `setup-390.png` (superseded by the Stage 3 claim screen)
-- The 2026-11-04 screenshots were regenerated after the page-header cleanup; each page header now starts with the page title and has no eyebrow.
+- The 2026-11-04 screenshots were regenerated after the page-header and Chart of Accounts cleanups; each page header starts with the page title, and the accounts table shows Code, Account, Status, and Actions.
 
 ## Requirement-to-evidence map
 
@@ -250,6 +250,12 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-11-04 | `npm run demo:build` after the page-header cleanup | PASS, 44 files | 16 entries, 2 ledgers, 34 accounts; demo carries the no-eyebrow page headers |
 | 2026-11-04 | Browser verification of the page-header cleanup | PASS | Demo at 1440 and 390 px: zero `.page-header .eyebrow` elements on Dashboard, Chart of Accounts, Business Transactions, General Journal, Adjustments, and Reports; SOE chip 172.3 by 27.25 px with `white-space: nowrap`; no page errors |
 | 2026-11-04 | GitHub Pages deployment of the final review build | PASS | Pushed `22cad53`; workflow run 41800659639 succeeded and published `gh-pages` commit c737923 ("Demo site from 22cad53..."). A fresh Chromium context at <https://derp28.github.io/AccountingSystem/?v=22cad53> found zero `.page-header .eyebrow` elements on all six pages at 1440 px and on Reports at 390 px, measured the SOE chip at 172.3 by 27.25 px with `white-space: nowrap`, and saw the simulated-PDF no-file note; no page errors. |
+| 2026-11-04 | User-requested Chart of Accounts column cleanup | PASS | Removed the Normal balance and Balance columns from the Chart of Accounts table in `public/js/views/accounts.js`; rows now show Code, Account, Status, and Actions. The category header retains its Group balance summary. |
+| 2026-11-04 | `npm run check` after the Chart of Accounts cleanup | PASS, 232/232 | Static, schema, auth, report, print, and demo checks unchanged |
+| 2026-11-04 | `npm test` after the Chart of Accounts cleanup | PASS, 41/41 | Unit + integration, including the real restart and report invariants |
+| 2026-11-04 | `npm run test:e2e` after the Chart of Accounts cleanup | PASS, 9/9 | Auth, critical path, mobile drawer, reports/print, XSS, and screenshots; screenshots regenerated with the reduced Chart of Accounts table |
+| 2026-11-04 | `npm run demo:build` after the Chart of Accounts cleanup | PASS, 44 files | 16 entries, 2 ledgers, 34 accounts; demo carries the reduced Chart of Accounts table |
+| 2026-11-04 | Browser verification of the Chart of Accounts cleanup | PASS | Demo at 1440 and 390 px: table headers are Code, Account, Status, and Actions with no Normal balance or Balance column; category Group balance summary remains; no horizontal overflow at 390 px; no page errors |
 
 ## Known limitations
 

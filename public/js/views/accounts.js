@@ -1,11 +1,9 @@
 import {
   CASH_FLOW_CLASSES,
   CATEGORIES,
-  CATEGORY_MAP,
   accountDisplayBalance,
   cashFlowClassLabel,
   defaultCashFlowClass,
-  getCategory,
   nextAccountCode,
   validateAccountInput,
 } from "../accounting.js";
@@ -39,9 +37,7 @@ function displayBalance(account, state) {
     : accountDisplayBalance(account, state.entries);
 }
 
-function accountRowHtml(account, state, currency) {
-  const balance = displayBalance(account, state);
-  const category = getCategory(account.category);
+function accountRowHtml(account, state) {
   const flowLabel =
     account.cashFlowClass && account.cashFlowClass !== "OPERATING"
       ? cashFlowClassLabel(account.cashFlowClass)
@@ -66,10 +62,6 @@ function accountRowHtml(account, state, currency) {
         }</div>
         <div class="account-description">${escapeHtml(account.description || "No description")}</div>
       </td>
-      <td data-label="Normal balance"><span class="muted">${escapeHtml(
-        category.normal === "debit" ? "Debit" : "Credit",
-      )}</span></td>
-      <td class="num" data-label="Balance">${escapeHtml(formatMoney(balance, currency))}</td>
       <td data-label="Status">
         <span class="badge ${account.active ? "badge-posted" : "badge-inactive"}">${
           account.active ? "Active" : "Inactive"
@@ -127,14 +119,12 @@ export function renderAccounts(container, state) {
               <tr>
                 <th scope="col">Code</th>
                 <th scope="col">Account</th>
-                <th scope="col">Normal balance</th>
-                <th scope="col" class="num">Balance</th>
                 <th scope="col">Status</th>
                 <th scope="col"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
-              ${accounts.map((account) => accountRowHtml(account, state, currency)).join("")}
+              ${accounts.map((account) => accountRowHtml(account, state)).join("")}
             </tbody>
           </table>
         </div>

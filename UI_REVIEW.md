@@ -2,7 +2,7 @@
 
 **Stage 1 status:** Approved by the user on 2026-10-20.
 **Stage 2 status:** UI approved and final product signoff accepted by the user on 2026-10-20.
-**Stage 3 status:** Implemented and automatically verified on 2026-11-02; UI review fixes and the user-requested page-header cleanup applied 2026-11-04. **Awaiting user UI review. Not yet approved.**
+**Stage 3 status:** Implemented and automatically verified on 2026-11-02; UI review fixes, the user-requested page-header cleanup, and the Chart of Accounts column cleanup applied 2026-11-04. **Awaiting user UI review. Not yet approved.**
 **Build:** Stage 3 local Express + SQLite app using the approved Stage 1/2 visual system, adding local access screens, a ledger switcher, and a Reports page with the Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and a supporting trial balance, plus browser print/PDF.
 **Reviewer:** User approved the Stage 1 and Stage 2 UI. The implementation team produced the Stage 3 automated evidence and performed the 2026-11-04 UI review; user approval remains the gate.
 
@@ -54,6 +54,7 @@ The browser run also asserts no page errors, no page-level horizontal overflow a
 - Settings gains **Lock now** and **Sign out** actions and renames “workspace” wording to “ledger” where it refers to the active set of books.
 - A new **Reports** page (`/reports`) adds five abbreviated tabs — SOCI, SOE, SOFP, SOCF, and a supporting TB — with full statement names on hover/focus and in accessible labels and headings. The four statements and the trial balance share an **Adjusted / Unadjusted** basis toggle, as-of/period date inputs, and a Refresh control, and keep the ledger-paper card design.
 - **Cash-flow activity** is editable on the account form. The starter chart classifies cash accounts as cash, equipment and supplies as investing, accumulated depreciation as non-cash, and equity/notes as financing.
+- The **Chart of Accounts** table lists Code, Account, Status, and Actions. Each category header retains a Group balance total; per-account Normal balance and Balance columns are not shown.
 - The live app prints the active statement or all four statements through the browser's **Print / Save as PDF** dialog, with a letterhead and without application chrome.
 - The public demo at <https://derp28.github.io/AccountingSystem/> runs the same UI against an in-memory engine. It cannot persist data, resets on reload, says so, and shows a labeled simulated PDF preview instead of creating a file.
 - The dashboard trial-balance card links to the Reports page.
@@ -73,6 +74,8 @@ The report body is now exposed as a labelled `tabpanel` (`role="tabpanel"`, `ari
 
 The 2026-11-04 final review pass also applied the user's request to remove the redundant page eyebrow labels ("Dashboard", "Reports", and similar). The shared `pageHeader` component now renders only the title, description, and actions; all six page views stopped passing an eyebrow. Modal eyebrows such as "Chart of accounts" and "Demo only" remain. The same build keeps the mobile report status chip on one line (`white-space: nowrap`) and wraps it below the statement title at narrow widths. Verification after the change: 232/232 static checks, 41/41 backend tests, and 9/9 Playwright tests; the demo rebuilt to 44 files (16 entries, 2 ledgers, 34 accounts). A 1440/390 px browser pass found zero `.page-header .eyebrow` elements on Dashboard, Chart of Accounts, Business Transactions, General Journal, Adjustments, and Reports, and the SOE chip measured 172.3 by 27.25 px with `white-space: nowrap`; no page errors. The final build was pushed as commit `22cad53`; workflow run 41800659639 succeeded and published `gh-pages` commit c737923. A fresh Chromium context at <https://derp28.github.io/AccountingSystem/?v=22cad53> found zero page-header eyebrows on all six pages at 1440 px and on Reports at 390 px, measured the SOE chip at 172.3 by 27.25 px with `white-space: nowrap`, and saw the simulated-PDF no-file note; no page errors.
 
+The 2026-11-04 review also applied the user's request to remove the Normal balance and Balance columns from the Chart of Accounts table. Each row now shows Code, Account, Status, and Actions; the category header retains its Group balance summary. The account editor's help text explaining that normal balance is derived from the category remains. Verification: 232/232 static checks, 41/41 backend tests, and 9/9 Playwright tests; screenshots were regenerated and the demo rebuilt to 44 files (16 entries, 2 ledgers, 34 accounts). A 1440/390 px browser pass found no Normal balance or Balance column headers, the group balance summary still present, and no page errors.
+
 Screenshots at the required widths now include the Reports page:
 
 - Desktop 1440×900: `screenshots/dashboard-1440.png`, `accounts-1440.png`, `transactions-1440.png`, `journal-1440.png`, `adjustments-1440.png`, `reports-1440.png`
@@ -80,7 +83,7 @@ Screenshots at the required widths now include the Reports page:
 - Mobile 390×844: `screenshots/dashboard-390.png`, `accounts-390.png`, `transactions-390.png`, `journal-390.png`, `adjustments-390.png`, `reports-390.png`
 - Mobile drawer: `screenshots/mobile-navigation-390.png`
 
-The screenshots were regenerated after the page-header cleanup; each page header now starts with the page title and has no eyebrow.
+The screenshots were regenerated after the page-header and Chart of Accounts cleanups; each page header starts with the page title, and the accounts table shows Code, Account, Status, and Actions.
 
 ## Stage 3 review checklist (evidence-backed, pending user approval)
 
@@ -99,6 +102,7 @@ The screenshots were regenerated after the page-header cleanup; each page header
 - [x] The public demo's PDF action opens a clearly labeled simulated preview with a disabled Save as PDF button and says that no file is created or downloaded.
 - [x] Cash-flow activity is editable on the account form; the starter chart classifies equipment and supplies as investing, cash accounts as cash, and depreciation as non-cash.
 - [x] Zero-balance accounts are hidden; the SOFP shows a computed accumulated-earnings line and a balanced indicator.
+- [x] Chart of Accounts rows show Code, Account, Status, and Actions without per-account Normal balance or Balance columns; the category Group balance summary remains.
 - [x] Desktop, tablet, and mobile layouts remain usable; the mobile drawer's close button is reachable at scroll top; no console errors.
 - [ ] **User approval of the Stage 3 UI** — pending.
 
@@ -176,3 +180,5 @@ Stage 2 UI and final product scope were approved by the user on 2026-10-20. Acco
 **Stage 3 UI review (2026-11-04):** the implementation team reviewed the live app and the demo at desktop, tablet, and mobile widths. The review fixed the report-chip contrast and the mobile drawer close-button layering, added tabpanel semantics, rebuilt the demo, and reran 232 static checks, 41 backend tests, and 9 Playwright tests. **User approval of the Stage 3 UI is the outstanding gate.**
 
 **Stage 3 page-header cleanup (2026-11-04):** the user asked to remove the redundant "Dashboard"/"Reports" eyebrow labels from every page and tab. The shared page header now renders only the title and description, all six page views dropped their eyebrow argument, and modal eyebrows were retained. The mobile report status chip wrap fix was included in the same build. Verification: 232/232 static checks, 41/41 backend tests, 9/9 Playwright tests, and a browser pass at 1440/390 px with no page eyebrows and a single-line SOE chip. **Awaiting user approval of the resulting Stage 3 UI.**
+
+**Stage 3 Chart of Accounts cleanup (2026-11-04):** the user asked to remove the Normal balance and Balance columns from the Chart of Accounts table. The table now shows Code, Account, Status, and Actions, while each category header keeps its Group balance summary; the editor still explains category-derived normal balance. Verification: 232/232 static checks, 41/41 backend tests, 9/9 Playwright tests, screenshots regenerated, demo rebuilt to 44 files, and no page errors. **Awaiting user approval of the resulting Stage 3 UI.**
