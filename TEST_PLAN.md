@@ -249,6 +249,7 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-11-04 | `npm run test:e2e` after the page-header cleanup | PASS, 9/9 | Auth, critical path, mobile drawer, reports/print, XSS, and screenshots; screenshots regenerated without page eyebrows |
 | 2026-11-04 | `npm run demo:build` after the page-header cleanup | PASS, 44 files | 16 entries, 2 ledgers, 34 accounts; demo carries the no-eyebrow page headers |
 | 2026-11-04 | Browser verification of the page-header cleanup | PASS | Demo at 1440 and 390 px: zero `.page-header .eyebrow` elements on Dashboard, Chart of Accounts, Business Transactions, General Journal, Adjustments, and Reports; SOE chip 172.3 by 27.25 px with `white-space: nowrap`; no page errors |
+| 2026-11-04 | GitHub Pages deployment of the final review build | PASS | Pushed `22cad53`; workflow run 41800659639 succeeded and published `gh-pages` commit c737923 ("Demo site from 22cad53..."). A fresh Chromium context at <https://derp28.github.io/AccountingSystem/?v=22cad53> found zero `.page-header .eyebrow` elements on all six pages at 1440 px and on Reports at 390 px, measured the SOE chip at 172.3 by 27.25 px with `white-space: nowrap`, and saw the simulated-PDF no-file note; no page errors. |
 
 ## Known limitations
 
