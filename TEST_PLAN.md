@@ -256,6 +256,7 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-11-04 | `npm run test:e2e` after the Chart of Accounts cleanup | PASS, 9/9 | Auth, critical path, mobile drawer, reports/print, XSS, and screenshots; screenshots regenerated with the reduced Chart of Accounts table |
 | 2026-11-04 | `npm run demo:build` after the Chart of Accounts cleanup | PASS, 44 files | 16 entries, 2 ledgers, 34 accounts; demo carries the reduced Chart of Accounts table |
 | 2026-11-04 | Browser verification of the Chart of Accounts cleanup | PASS | Demo at 1440 and 390 px: table headers are Code, Account, Status, and Actions with no Normal balance or Balance column; category Group balance summary remains; no horizontal overflow at 390 px; no page errors |
+| 2026-11-04 | GitHub Pages deployment of the Chart of Accounts cleanup | PASS | Pushed `43c9326`; workflow run 41813634508 succeeded and published `gh-pages` commit 1933306 ("Demo site from 43c9326..."). A fresh Chromium context at <https://derp28.github.io/AccountingSystem/?v=43c9326#/accounts> verified Code/Account/Status/Actions headers, no Normal balance or Balance headers, the ₱128,950.00 Group balance summary, the demo's no-persistence note, five report tabs, no horizontal overflow at 390 px, and no page or console errors. |
 
 ## Known limitations
 
