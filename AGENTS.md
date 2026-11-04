@@ -47,7 +47,7 @@
 | G2 Accounting | Stage 2 posting, immutability, reversal, persistence, security, and tests pass. | Technical criteria passed; Stage 2 UI approved 2026-10-20; policies D-016, D-018, D-019, D-021 approved |
 | G3 Final | Product-wide final signoff and any later-stage scope. | Passed 2026-10-20 for current Stage 2 scope; later-stage scope authorized as Stage 3 |
 | G4 Stage 3 | Local access, multiple ledgers, the four financial statements plus trial balance, print/PDF, and distribution implemented and verified; UI approved by the user. | Implemented and automatically verified 2026-11-02 (schema 7; 232 static checks, 41 backend tests, 9 E2E tests); **UI approval pending** |
-| G5 Public demo | Static GitHub Pages demo builds from the real UI and services, carries no persistence claims, simulates PDF output, and publishes on push. | Passed 2026-10-24; re-verified 2026-11-02: workflow publishes `docs/` to `gh-pages`; <https://derp28.github.io/AccountingSystem/> builds from the real UI and services |
+| G5 Public demo | Static GitHub Pages demo builds from the real UI and services, carries no persistence claims, simulates PDF output, and publishes on push. | Passed 2026-10-24; re-verified 2026-11-02 and deployed 2026-11-04: workflow run 41752716402 published `gh-pages` commit 3d030d8; <https://derp28.github.io/AccountingSystem/> shows the five report tabs, all four statements, and the simulated PDF preview |
 
 ## Definition of done
 
