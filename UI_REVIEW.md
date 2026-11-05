@@ -2,9 +2,9 @@
 
 **Stage 1 status:** Approved by the user on 2026-10-20.
 **Stage 2 status:** UI approved and final product signoff accepted by the user on 2026-10-20.
-**Stage 3 status:** Implemented and automatically verified on 2026-11-02; UI review fixes, the user-requested page-header cleanup, and the Chart of Accounts column cleanup applied 2026-11-04. **Awaiting user UI review. Not yet approved.**
+**Stage 3 status:** Approved by the user on 2026-11-05. Implemented and automatically verified on 2026-11-02; UI review fixes, the user-requested page-header cleanup, and the Chart of Accounts column cleanup applied 2026-11-04.
 **Build:** Stage 3 local Express + SQLite app using the approved Stage 1/2 visual system, adding local access screens, a ledger switcher, and a Reports page with the Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and a supporting trial balance, plus browser print/PDF.
-**Reviewer:** User approved the Stage 1 and Stage 2 UI. The implementation team produced the Stage 3 automated evidence and performed the 2026-11-04 UI review; user approval remains the gate.
+**Reviewer:** User approved the Stage 1, Stage 2, and Stage 3 UI (Stage 3 on 2026-11-05). The implementation team produced the Stage 3 automated evidence and performed the 2026-11-04 UI review.
 
 ## Launch
 
@@ -104,7 +104,7 @@ The screenshots were regenerated after the page-header and Chart of Accounts cle
 - [x] Zero-balance accounts are hidden; the SOFP shows a computed accumulated-earnings line and a balanced indicator.
 - [x] Chart of Accounts rows show Code, Account, Status, and Actions without per-account Normal balance or Balance columns; the category Group balance summary remains.
 - [x] Desktop, tablet, and mobile layouts remain usable; the mobile drawer's close button is reachable at scroll top; no console errors.
-- [ ] **User approval of the Stage 3 UI** — pending.
+- [x] **User approval of the Stage 3 UI** — approved 2026-11-05.
 
 ### Minor observations (non-blocking)
 
@@ -169,7 +169,7 @@ The checklist below records the acceptance checks. Automated coverage is in `TES
 - Screenshots are synthetic E2E data and may include a keyboard focus ring on the page heading.
 - Automated accessibility coverage is targeted; no axe or screen-reader audit is claimed.
 - Report tabs do not implement arrow-key roving focus; Tab/Shift+Tab and Enter/Space work, and the report body is a labelled tabpanel.
-- The Stage 3 UI has not yet been approved by the user; this review records the fixes and evidence for the user's decision.
+- The Stage 3 UI was approved by the user on 2026-11-05; the remaining observations above are non-blocking.
 
 ## Feedback
 
@@ -177,8 +177,10 @@ Stage 2 UI and final product scope were approved by the user on 2026-10-20. Acco
 
 **Stage 3 (2026-10-21, extended 2026-11-02):** the user requested a local username/password login, multiple ledgers under one local account, the four adjusted/unadjusted financial statements plus a supporting trial balance, browser print/PDF, and self-hosted distribution. That scope is implemented, documented in `DECISIONS.md` (D-022..D-038), and automatically verified. The public demo is deployed at <https://derp28.github.io/AccountingSystem/>.
 
-**Stage 3 UI review (2026-11-04):** the implementation team reviewed the live app and the demo at desktop, tablet, and mobile widths. The review fixed the report-chip contrast and the mobile drawer close-button layering, added tabpanel semantics, rebuilt the demo, and reran 232 static checks, 41 backend tests, and 9 Playwright tests. **User approval of the Stage 3 UI is the outstanding gate.**
+**Stage 3 UI review (2026-11-04):** the implementation team reviewed the live app and the demo at desktop, tablet, and mobile widths. The review fixed the report-chip contrast and the mobile drawer close-button layering, added tabpanel semantics, rebuilt the demo, and reran 232 static checks, 41 backend tests, and 9 Playwright tests. The user approved the Stage 3 UI on 2026-11-05.
 
-**Stage 3 page-header cleanup (2026-11-04):** the user asked to remove the redundant "Dashboard"/"Reports" eyebrow labels from every page and tab. The shared page header now renders only the title and description, all six page views dropped their eyebrow argument, and modal eyebrows were retained. The mobile report status chip wrap fix was included in the same build. Verification: 232/232 static checks, 41/41 backend tests, 9/9 Playwright tests, and a browser pass at 1440/390 px with no page eyebrows and a single-line SOE chip. **Awaiting user approval of the resulting Stage 3 UI.**
+**Stage 3 page-header cleanup (2026-11-04):** the user asked to remove the redundant "Dashboard"/"Reports" eyebrow labels from every page and tab. The shared page header now renders only the title and description, all six page views dropped their eyebrow argument, and modal eyebrows were retained. The mobile report status chip wrap fix was included in the same build. Verification: 232/232 static checks, 41/41 backend tests, 9/9 Playwright tests, and a browser pass at 1440/390 px with no page eyebrows and a single-line SOE chip. The user approved the resulting Stage 3 UI on 2026-11-05.
 
-**Stage 3 Chart of Accounts cleanup (2026-11-04):** the user asked to remove the Normal balance and Balance columns from the Chart of Accounts table. The table now shows Code, Account, Status, and Actions, while each category header keeps its Group balance summary; the editor still explains category-derived normal balance. Verification: 232/232 static checks, 41/41 backend tests, 9/9 Playwright tests, screenshots regenerated, demo rebuilt to 44 files, and no page errors. Deployed as `43c9326`; workflow run 41813634508 published `gh-pages` commit 1933306, and the live site was rechecked at 1440/390 with the reduced table, the Group balance summary, five report tabs, and no page or console errors. **Awaiting user approval of the resulting Stage 3 UI.**
+**Stage 3 Chart of Accounts cleanup (2026-11-04):** the user asked to remove the Normal balance and Balance columns from the Chart of Accounts table. The table now shows Code, Account, Status, and Actions, while each category header keeps its Group balance summary; the editor still explains category-derived normal balance. Verification: 232/232 static checks, 41/41 backend tests, 9/9 Playwright tests, screenshots regenerated, demo rebuilt to 44 files, and no page errors. Deployed as `43c9326`; workflow run 41813634508 published `gh-pages` commit 1933306, and the live site was rechecked at 1440/390 with the reduced table, the Group balance summary, five report tabs, and no page or console errors. The user approved the resulting Stage 3 UI on 2026-11-05.
+
+**Stage 3 approval (2026-11-05):** the user approved the Stage 3 UI. Gate G4 is passed and Stage 3 is complete; no further Stage 3 UI work is pending. Period close, exports, multi-currency, tax/VAT, and statutory rules remain deferred and unauthorized.

@@ -14,7 +14,7 @@ Period close, exports, automated adjustment schedules, tax/VAT/statutory logic, 
 - E2E: `http://127.0.0.1:3100`, database `data/e2e.sqlite`
 - Browser: Playwright Chromium; `npm run test:e2e` launches `scripts/test-e2e.mjs` and `scripts/e2e-server.mjs`
 - SQLite: Node built-in `node:sqlite`
-- Date of the latest local evidence run: 2026-11-04; deployed-site check: 2026-11-04
+- Date of the latest local evidence run: 2026-11-04; deployed-site check: 2026-11-04; Stage 3 UI approval: 2026-11-05
 
 ## Commands
 
@@ -257,6 +257,7 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-11-04 | `npm run demo:build` after the Chart of Accounts cleanup | PASS, 44 files | 16 entries, 2 ledgers, 34 accounts; demo carries the reduced Chart of Accounts table |
 | 2026-11-04 | Browser verification of the Chart of Accounts cleanup | PASS | Demo at 1440 and 390 px: table headers are Code, Account, Status, and Actions with no Normal balance or Balance column; category Group balance summary remains; no horizontal overflow at 390 px; no page errors |
 | 2026-11-04 | GitHub Pages deployment of the Chart of Accounts cleanup | PASS | Pushed `43c9326`; workflow run 41813634508 succeeded and published `gh-pages` commit 1933306 ("Demo site from 43c9326..."). A fresh Chromium context at <https://derp28.github.io/AccountingSystem/?v=43c9326#/accounts> verified Code/Account/Status/Actions headers, no Normal balance or Balance headers, the ₱128,950.00 Group balance summary, the demo's no-persistence note, five report tabs, no horizontal overflow at 390 px, and no page or console errors. |
+| 2026-11-05 | User Stage 3 UI approval | PASS | User approved the Stage 3 UI; recorded in `UI_REVIEW.md` and `TASKS.yaml` (GATE-4). No code changes; the prior 232/232 static, 41/41 backend, and 9/9 E2E evidence remains valid. |
 
 ## Known limitations
 
@@ -274,7 +275,7 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 - The Statement of Comprehensive Income equals net income because the app has no other comprehensive income items. The Statement of Owner's Equity uses the computed accumulated-earnings line from the balance sheet; the books are not closed.
 - The public demo's PDF preview is simulated. It creates no file and downloads nothing; only the self-hosted live app uses the browser's Print / Save as PDF dialog.
 - The demo's sample transactions are the owner's December 2023 set; the 11 December hiring agreement has no entry until payroll is recorded.
-- The Stage 3 UI has not yet been approved by the user. The 2026-11-04 review fixed the report-chip contrast, mobile drawer close-button layering, and mobile chip wrapping, and removed the redundant page eyebrows at the user's request; the remaining minor observations are in `UI_REVIEW.md`.
+- The Stage 3 UI was approved by the user on 2026-11-05. The 2026-11-04 review fixed the report-chip contrast, mobile drawer close-button layering, and mobile chip wrapping, and removed the redundant page eyebrows at the user's request; the remaining minor observations are in `UI_REVIEW.md`.
 - Report tabs support Tab/Shift+Tab and Enter/Space but not arrow-key roving focus; the report body is a labelled tabpanel.
 - Account codes are constrained to three-digit category hundred-series ranges by D-018; out-of-range codes are rejected by the API, UI, and database triggers.
 - Reversals use the approved D-019 policy: server current UTC date and `GENERAL_JOURNAL` source type.
