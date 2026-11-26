@@ -1,0 +1,55 @@
+/* Demo-only chrome. Kept separate so the real app styles stay untouched. */
+
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 9px 18px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #f6f1e6;
+  background: var(--green-950, #102a20);
+  border-bottom: 1px solid rgba(246, 241, 230, 0.16);
+}
+
+.demo-banner strong {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brass-soft, #f3e8d4);
+  white-space: nowrap;
+}
+
+.demo-banner span {
+  flex: 1 1 320px;
+  color: rgba(246, 241, 230, 0.86);
+}
+
+.demo-banner a {
+  color: var(--brass-soft, #f3e8d4);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.demo-banner a:hover {
+  color: #fffdf8;
+}
+
+/* The app shell expects a full-height viewport; leave room for the banner. */
+html.has-demo-banner,
+html.has-demo-banner body {
+  height: auto;
+  min-height: 100%;
+}
+
+@media print {
+  .demo-banner {
+    display: none;
+  }
+}
