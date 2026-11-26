@@ -93,7 +93,7 @@ function mountDemoBanner() {
     <span>
       Sample books from the real Ledgerline app, running entirely in your browser.
       Changes last until you reload, and nothing is sent anywhere.
-      The sign-in screen accepts any password. PDF previews are simulated; no file is downloaded.
+      The sign-in screen accepts any password. PDF previews are simulated; the .xlsx export downloads a real workbook from the sample data.
     </span>
     <a href="https://github.com/Derp28/AccountingSystem#run-from-source">Run it locally for real persistence</a>
   `;

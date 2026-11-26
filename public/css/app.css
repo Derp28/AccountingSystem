@@ -1903,6 +1903,14 @@ dialog.modal::backdrop {
   margin-top: auto;
 }
 
+.adjustment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .adjustment-amount {
   font-size: 18px;
   font-weight: 700;
@@ -2706,14 +2714,15 @@ dialog.modal::backdrop {
 .ledger-switcher {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 12px 14px 14px;
-  border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(164, 127, 71, 0.06), transparent);
+  gap: 8px;
+  padding: 12px 12px 13px;
+  border: 1px solid rgba(246, 241, 230, 0.14);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 253, 248, 0.05);
 }
 
 .ledger-switcher-label {
-  color: var(--ink-soft);
+  color: rgba(246, 241, 230, 0.62);
   font-size: 10.5px;
   font-weight: 750;
   letter-spacing: 0.09em;
@@ -2724,15 +2733,37 @@ dialog.modal::backdrop {
   width: 100%;
   min-height: 36px;
   padding: 6px 9px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid rgba(246, 241, 230, 0.24);
   border-radius: var(--radius-sm);
-  background: var(--paper-raised);
-  color: var(--ink);
+  background-color: #0f2b21;
+  color: #f8f2e6;
+  color-scheme: dark;
   font-size: 13px;
+  font-weight: 600;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.ledger-switcher-select:hover {
+  border-color: rgba(241, 223, 185, 0.55);
+}
+
+.ledger-switcher-select option {
+  background: var(--green-900);
+  color: #f4eee2;
 }
 
 .ledger-switcher-new {
+  width: 100%;
   justify-content: flex-start;
+  border: 1px dashed rgba(246, 241, 230, 0.28);
+  background: rgba(255, 253, 248, 0.04);
+  color: rgba(246, 241, 230, 0.86);
+}
+
+.ledger-switcher-new:hover {
+  border-color: rgba(241, 223, 185, 0.55);
+  background: rgba(255, 253, 248, 0.1);
+  color: #fffdf8;
 }
 
 .sidebar-lock {

@@ -13,6 +13,11 @@ async function ensureSetup(page) {
   await expect(page.getByRole("heading", { name: /Welcome back, AAA Computer Services/i })).toBeVisible();
 }
 
+async function createDraft(page, entry) {
+  const created = await apiJson(page, "POST", "/api/entries", entry);
+  if (!created.ok()) throw new Error(`Draft create failed with ${created.status()}`);
+}
+
 async function ensureSampleData(page) {
   const bootstrap = await (await page.request.get("/api/bootstrap")).json();
   if (bootstrap.dashboard.counts.postedEntries === 0) {
@@ -42,6 +47,33 @@ async function ensureSampleData(page) {
       ],
     });
   }
+
+  const withDrafts = await (await page.request.get("/api/bootstrap")).json();
+  if (!withDrafts.entries.some((entry) => entry.memo === "Draft: site survey")) {
+    await createDraft(page, {
+      sourceType: "SALES_INVOICE",
+      date: "2026-10-20",
+      memo: "Draft: site survey",
+      reference: "INV-DRAFT",
+      lines: [
+        { accountId: "acct-101", description: "Draft invoice", debitCents: 30000, creditCents: 0 },
+        { accountId: "acct-400", description: "Draft services", debitCents: 0, creditCents: 30000 },
+      ],
+    });
+  }
+  if (!withDrafts.entries.some((entry) => entry.memo === "Draft: October depreciation")) {
+    await createDraft(page, {
+      sourceType: "ADJUSTMENT",
+      date: "2026-10-20",
+      memo: "Draft: October depreciation",
+      adjustmentType: "ACCRUED_EXPENSE",
+      adjustmentReason: "Draft adjusting entry for the screenshots; not posted.",
+      lines: [
+        { accountId: "acct-503", description: "Draft depreciation", debitCents: 12000, creditCents: 0 },
+        { accountId: "acct-104", description: "Draft accumulated depreciation", debitCents: 0, creditCents: 12000 },
+      ],
+    });
+  }
 }
 
 const pages = [
@@ -53,7 +85,7 @@ const pages = [
   { slug: "reports", heading: "Financial statements" },
 ];
 
-test("capture Stage 3 screenshots at 1440, 768, and 390 px", async ({ page }) => {
+test("capture Stage 4 screenshots at 1440, 768, and 390 px", async ({ page }) => {
   test.setTimeout(120_000);
   fs.mkdirSync(screenshotDir, { recursive: true });
   const pageErrors = [];

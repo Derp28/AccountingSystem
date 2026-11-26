@@ -28,6 +28,7 @@ export function renderAdjustments(container, state) {
       const type = ADJUSTMENT_TYPE_MAP[entry.adjustmentType];
       const amount = entryTotalDebit(entry);
       const isReversed = Boolean(entry.reversedBy);
+      const isDraft = entry.status === "DRAFT";
       return `
         <article
           class="adjustment-card"
@@ -61,9 +62,24 @@ export function renderAdjustments(container, state) {
               <div class="adjustment-amount">${escapeHtml(formatMoney(amount, currency))}</div>
               <div class="adjustment-meta">Manual double-entry adjustment</div>
             </div>
-            <button class="btn btn-secondary btn-sm" type="button" data-open-entry="${escapeHtml(
-              entry.id,
-            )}">Open ${icon("arrow-right", 14)}</button>
+            <div class="adjustment-actions">
+              ${
+                isDraft
+                  ? `<button class="btn btn-secondary btn-sm" type="button" data-edit-entry="${escapeHtml(
+                      entry.id,
+                    )}" aria-label="Edit draft ${escapeHtml(entry.entryNo)}">${icon(
+                      "edit",
+                      14,
+                    )} Edit</button>`
+                  : ""
+              }
+              <button class="btn btn-secondary btn-sm" type="button" data-open-entry="${escapeHtml(
+                entry.id,
+              )}" aria-label="Open ${escapeHtml(entry.entryNo)}">Open ${icon(
+                "arrow-right",
+                14,
+              )}</button>
+            </div>
           </div>
         </article>
       `;
@@ -180,6 +196,16 @@ export function renderAdjustments(container, state) {
         sourceType: "ADJUSTMENT",
         allowedTypes: ["ADJUSTMENT"],
       });
+    });
+  });
+
+  container.querySelectorAll("[data-edit-entry]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const entry = getState().entries.find(
+        (candidate) => candidate.id === button.dataset.editEntry,
+      );
+      if (!entry || entry.status !== "DRAFT") return;
+      openEntryEditor({ entry, allowedTypes: [entry.sourceType] });
     });
   });
 

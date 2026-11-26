@@ -47,6 +47,9 @@ const requiredFiles = [
   "public/js/format.js",
   "public/js/dom.js",
   "public/js/icons.js",
+  "public/js/xlsx.js",
+  "public/js/ledger-export.js",
+  "public/js/download.js",
   "public/js/components/nav.js",
   "public/js/components/modal.js",
   "public/js/components/toast.js",
@@ -109,6 +112,8 @@ const requiredFiles = [
   ".github/workflows/pages.yml",
   "tests/unit/money.test.js",
   "tests/unit/validation.test.js",
+  "tests/unit/export.test.js",
+  "tests/helpers/xlsx.js",
   "tests/integration/accounting.test.js",
   "tests/integration/http.test.js",
   "tests/integration/restart.test.js",
@@ -710,13 +715,53 @@ if (
 if (
   /openPdfPreview/.test(reportsView) &&
   /Simulated preview/.test(reportsView) &&
-  /No file is created or downloaded/.test(reportsView) &&
+  /No PDF file is created or downloaded/.test(reportsView) &&
   /isDemoMode/.test(reportsView) &&
   /window\.print\(\)/.test(reportsView)
 ) {
-  pass("reports view uses browser print in the live app and a simulated preview in the demo");
+  pass("reports view uses browser print in the live app and a simulated PDF preview in the demo");
 } else {
-  fail("reports view does not separate live printing from the demo preview");
+  fail("reports view does not separate live printing from the demo PDF preview");
+}
+
+const xlsxWriter = readProject("public/js/xlsx.js");
+const ledgerExport = readProject("public/js/ledger-export.js");
+const downloadHelper = readProject("public/js/download.js");
+const demoEntry = readProject("demo/main.js");
+const exportSheetNames = [
+  "Summary",
+  "Chart of Accounts",
+  "Business Transactions",
+  "General Journal",
+  "Adjustments",
+  "Trial Balance",
+  "SOCI",
+  "SOE",
+  "SOFP",
+  "SOCF",
+];
+const spreadsheetDependencies = Object.keys({
+  ...(packageJson.dependencies || {}),
+  ...(packageJson.devDependencies || {}),
+}).filter((name) => /xlsx|excel|sheet/i.test(name));
+if (
+  /export function buildXlsx/.test(xlsxWriter) &&
+  /inlineStr/.test(xlsxWriter) &&
+  !/<f[\s>]/.test(xlsxWriter) &&
+  /export function buildLedgerWorkbook/.test(ledgerExport) &&
+  exportSheetNames.every((name) => ledgerExport.includes(`name: "${name}"`)) &&
+  /Current active ledger only/.test(ledgerExport) &&
+  /Include drafts/.test(ledgerExport) &&
+  /data-export-xlsx/.test(reportsView) &&
+  /buildLedgerWorkbook/.test(reportsView) &&
+  /downloadBytes/.test(reportsView) &&
+  /URL\.createObjectURL/.test(downloadHelper) &&
+  /\.xlsx export downloads a real workbook/.test(demoEntry) &&
+  spreadsheetDependencies.length === 0
+) {
+  pass("reports exports the active ledger to a real .xlsx workbook with all ten sections");
+} else {
+  fail("the .xlsx export wiring, tabs, formula-safe writer, or dependency check is incomplete");
 }
 
 const reportsIntegration = readProject("tests/integration/reports.test.js");
@@ -729,11 +774,43 @@ if (
   /cash-flows/.test(reportsE2e) &&
   /report-financial-position/.test(reportsE2e) &&
   /emulateMedia\(\{ media: "print" \}\)/.test(reportsE2e) &&
-  /page\.pdf\(/.test(reportsE2e)
+  /page\.pdf\(/.test(reportsE2e) &&
+  /waitForEvent\("download"\)/.test(reportsE2e) &&
+  /workbookSheetNames/.test(reportsE2e) &&
+  /formula-safe/.test(reportsE2e)
 ) {
-  pass("integration and E2E tests cover the new statements, reconciliation, and print/PDF output");
+  pass("integration and E2E tests cover the statements, reconciliation, print/PDF, and .xlsx export");
 } else {
-  fail("statement integration or E2E coverage is incomplete");
+  fail("statement integration, E2E, or export coverage is incomplete");
+}
+
+const transactionsView = readProject("public/js/views/transactions.js");
+const journalView = readProject("public/js/views/journal.js");
+const adjustmentsView = readProject("public/js/views/adjustments.js");
+const entryForm = readProject("public/js/components/entry-form.js");
+if (
+  /data-edit-entry/.test(transactionsView) &&
+  /data-edit-entry/.test(journalView) &&
+  /data-edit-entry/.test(adjustmentsView) &&
+  /entry\.status === "DRAFT"/.test(transactionsView) &&
+  /entry\.status === "DRAFT"/.test(journalView) &&
+  /entry\.status === "DRAFT"/.test(adjustmentsView) &&
+  /Posted entries are immutable/.test(entryForm)
+) {
+  pass("draft-only Edit actions appear in transactions, journal, and adjustments, and posted entries stay locked");
+} else {
+  fail("draft-only Edit actions or the posted-entry editor guard are incomplete");
+}
+
+if (
+  /\.ledger-switcher-select\s*\{[\s\S]*?background-color:\s*#0f2b21/.test(appCss) &&
+  /\.ledger-switcher-select\s*\{[\s\S]*?color:\s*#f8f2e6/.test(appCss) &&
+  /\.ledger-switcher-new\s*\{[\s\S]*?color:\s*rgba\(246, 241, 230/.test(appCss) &&
+  /data-ledger-switcher/.test(readProject("public/js/components/nav.js"))
+) {
+  pass("sidebar ledger controls use the dark sidebar surface with light, readable text");
+} else {
+  fail("sidebar ledger controls still use an off-palette surface or unreadable text");
 }
 
 if (

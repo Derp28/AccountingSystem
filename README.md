@@ -16,12 +16,16 @@ Nothing is saved and no request leaves the page.
 - A local username and password that locks the running app.
 - One local account that can own **multiple ledgers** (separate sets of books).
 - Chart of Accounts, business transactions, general journal, and manual
-  adjustments. Posted entries are immutable; corrections are reversals.
+  adjustments. Draft rows and cards expose **Edit**; posted entries are
+  immutable and corrections are reversals.
 - Financial reports scoped to the active ledger:
   - **Trial balance** with an **as-of** date and a net debit/credit presentation.
   - **Income statement** for a from/to period.
   - **Balance sheet** as of a date, with a computed accumulated earnings line.
   - An **Adjusted / Unadjusted** basis toggle on every report.
+- A real **Export .xlsx** workbook of the active ledger from the Reports page.
+  The workbook has Summary, Chart of Accounts, Business Transactions, General
+  Journal, Adjustments, Trial Balance, SOCI, SOE, SOFP, and SOCF tabs.
 
 Adjusted reports include every posted entry. Unadjusted reports exclude
 adjustment entries and the reversals linked to adjustments. Drafts are never
@@ -44,6 +48,10 @@ GitHub Pages) on every push to `main`. The build:
 dates, account-code ranges, and posting rules cannot drift from the shipped app.
 The demo keeps everything in memory: reloading restores the sample books, and the
 sign-in screen accepts any password because no credential is checked.
+
+The demo's **Export .xlsx** button downloads a real workbook built from its
+in-memory sample data. Its PDF action remains a clearly labeled simulated preview
+and creates no file.
 
 GitHub Pages is static hosting, so the demo cannot run Express or SQLite. The
 sentences in the demo that would otherwise claim local persistence are rewritten
@@ -157,6 +165,28 @@ After signing in, use the ledger switcher in the sidebar to move between ledgers
 or to create a new one. Each ledger has its own Chart of Accounts, journal
 entries, numbering sequence, and reports. Creating a ledger seeds the standard
 Chart of Accounts again; it does not copy transactions from any other ledger.
+
+## Spreadsheet export
+
+**Reports → Export .xlsx** downloads the active ledger as a real workbook. It is
+built in the browser and uses no spreadsheet library. The ten tabs are:
+
+1. Summary
+2. Chart of Accounts
+3. Business Transactions (excludes adjustments)
+4. General Journal (all entries and lines)
+5. Adjustments (adjustment entries only)
+6. Trial Balance
+7. SOCI
+8. SOE
+9. SOFP
+10. SOCF
+
+The three entry tabs include drafts and show a Status column; the statements
+include posted entries only. The Trial Balance and four statements use the
+current Reports basis, `from`, `to`, and `asOf` controls. The filename is
+`ledgerline-{ledger-slug}-{date}.xlsx`. User-entered text is stored as text, not
+formulas, and money cells are numeric values derived from integer cents.
 
 ## Login and sessions
 

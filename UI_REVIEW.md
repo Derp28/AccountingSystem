@@ -1,10 +1,11 @@
-# UI_REVIEW.md — Stage 1, Stage 2, and Stage 3 approval records
+# UI_REVIEW.md — Stage 1, Stage 2, Stage 3, and Stage 4 records
 
 **Stage 1 status:** Approved by the user on 2026-10-20.
 **Stage 2 status:** UI approved and final product signoff accepted by the user on 2026-10-20.
 **Stage 3 status:** Approved by the user on 2026-11-05. Implemented and automatically verified on 2026-11-02; UI review fixes, the user-requested page-header cleanup, and the Chart of Accounts column cleanup applied 2026-11-04.
-**Build:** Stage 3 local Express + SQLite app using the approved Stage 1/2 visual system, adding local access screens, a ledger switcher, and a Reports page with the Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and a supporting trial balance, plus browser print/PDF.
-**Reviewer:** User approved the Stage 1, Stage 2, and Stage 3 UI (Stage 3 on 2026-11-05). The implementation team produced the Stage 3 automated evidence and performed the 2026-11-04 UI review.
+**Stage 4 status:** Implemented on 2026-11-25 at the user's request and automatically verified on 2026-11-26: real active-ledger `.xlsx` export, draft-only Edit actions, and sidebar ledger-control color alignment.
+**Build:** Stage 4 local Express + SQLite app using the approved Stage 1/2/3 visual system, adding a real `.xlsx` export of the active ledger, draft-only Edit actions in the three entry lists, and dark sidebar ledger controls.
+**Reviewer:** User approved the Stage 1, Stage 2, and Stage 3 UI (Stage 3 on 2026-11-05) and requested the Stage 4 changes on 2026-11-25. The implementation team produced the Stage 4 automated evidence and reviewed the resulting screens at 1440 and 390 px.
 
 ## Launch
 
@@ -85,6 +86,24 @@ Screenshots at the required widths now include the Reports page:
 
 The screenshots were regenerated after the page-header and Chart of Accounts cleanups; each page header starts with the page title, and the accounts table shows Code, Account, Status, and Actions.
 
+## Stage 4 UI changes (2026-11-25)
+
+- The Reports page gains an **Export .xlsx** action next to Print. It downloads a real ten-tab workbook for the active ledger in both the live app and the public demo. The demo note now says the `.xlsx` export is real while PDF previews remain simulated.
+- Business Transactions and General Journal rows show an **Edit** action only for drafts; Adjustments cards show **Edit** only for drafts. Posted and reversed entries keep view/reverse actions and cannot be opened in the editor.
+- The editor now shows existing draft line amounts with correct totals immediately on open; editing and saving a draft preserves its lines and values.
+- The sidebar ledger selector and **New ledger** action now use dark translucent surfaces, light text, visible borders, and dark native select options, matching the green sidebar instead of appearing as a light paper block.
+- The sidebar selector computes `background-color: rgb(15, 43, 33)` and `color: rgb(248, 242, 230)` in Chromium; the New ledger action uses light text and a dashed translucent border.
+
+## Stage 4 automated UI evidence
+
+Command: `npm run test:e2e`
+
+Result: **10/10 passed**. The critical-path test edits a transaction, journal, and adjustment draft through the new actions, asserts posted rows/cards have no Edit action, and verifies the sidebar selector's dark background and light foreground on the 390 px drawer. The reports spec downloads and inspects a real `.xlsx` workbook. The full regression also passed **245/245 static checks**, **44/44 unit/integration tests**, and `npm audit` 0.
+
+The built demo was served from `docs/` and its Reports page downloaded `ledgerline-general-ledger-2023-2023-12-31.xlsx` (82,576 bytes). The workbook has all ten sheet names, 849 inline-string cells, and zero `<f>` formula tags. The demo banner states that PDF previews are simulated while the `.xlsx` export downloads a real workbook from the sample data.
+
+Screenshots were regenerated at 1440×900, 768×1024, and 390×844. `transactions-1440.png` and `transactions-390.png` show the draft Edit action; `mobile-navigation-390.png` shows the dark ledger selector and New ledger action; `adjustments-1440.png` shows posted cards without Edit.
+
 ## Stage 3 review checklist (evidence-backed, pending user approval)
 
 - [x] First launch shows the claim screen; a valid claim creates the account, ledger, and session.
@@ -105,6 +124,18 @@ The screenshots were regenerated after the page-header and Chart of Accounts cle
 - [x] Chart of Accounts rows show Code, Account, Status, and Actions without per-account Normal balance or Balance columns; the category Group balance summary remains.
 - [x] Desktop, tablet, and mobile layouts remain usable; the mobile drawer's close button is reachable at scroll top; no console errors.
 - [x] **User approval of the Stage 3 UI** — approved 2026-11-05.
+
+## Stage 4 review checklist (evidence-backed)
+
+- [x] Reports exposes **Export .xlsx** and downloads a real workbook in the live app and demo.
+- [x] The workbook has ten tabs: Summary, Chart of Accounts, Business Transactions, General Journal, Adjustments, Trial Balance, SOCI, SOE, SOFP, and SOCF.
+- [x] Entry tabs include drafts with a Status column; statements use posted entries only.
+- [x] Draft rows in Business Transactions and General Journal expose Edit; posted/reversed rows do not.
+- [x] Draft adjustment cards expose Edit; posted/reversed cards do not.
+- [x] Editing a draft shows its existing line amounts and totals, and saving updates the row/card.
+- [x] The sidebar ledger selector and New ledger action use the dark sidebar surface with readable light text.
+- [x] Mobile drawer and desktop layouts remain usable with no page errors.
+- [x] The demo still says PDF previews are simulated and creates no PDF; its `.xlsx` download is real sample data.
 
 ### Minor observations (non-blocking)
 
@@ -160,7 +191,7 @@ The checklist below records the acceptance checks. Automated coverage is in `TES
 
 ## Known UI limitations
 
-- Period close, exports, automated adjustments, tax, multi-currency conversion, and roles/sharing are not present.
+- Period close, export formats other than the Stage 4 `.xlsx` workbook, automated adjustments, tax, multi-currency conversion, and roles/sharing are not present.
 - The password protects the running app, not the SQLite file; the access screen states that data-at-rest protection needs full-disk encryption.
 - There is no email recovery or reset link; recovery is the offline `npm run auth:reset-password` command.
 - Ledgers are separate sets of books, not a multi-user workspace.
@@ -183,4 +214,6 @@ Stage 2 UI and final product scope were approved by the user on 2026-10-20. Acco
 
 **Stage 3 Chart of Accounts cleanup (2026-11-04):** the user asked to remove the Normal balance and Balance columns from the Chart of Accounts table. The table now shows Code, Account, Status, and Actions, while each category header keeps its Group balance summary; the editor still explains category-derived normal balance. Verification: 232/232 static checks, 41/41 backend tests, 9/9 Playwright tests, screenshots regenerated, demo rebuilt to 44 files, and no page errors. Deployed as `43c9326`; workflow run 41813634508 published `gh-pages` commit 1933306, and the live site was rechecked at 1440/390 with the reduced table, the Group balance summary, five report tabs, and no page or console errors. The user approved the resulting Stage 3 UI on 2026-11-05.
 
-**Stage 3 approval (2026-11-05):** the user approved the Stage 3 UI. Gate G4 is passed and Stage 3 is complete; no further Stage 3 UI work is pending. Period close, exports, multi-currency, tax/VAT, and statutory rules remain deferred and unauthorized.
+**Stage 3 approval (2026-11-05):** the user approved the Stage 3 UI. Gate G4 is passed and Stage 3 is complete; no further Stage 3 UI work is pending. Period close, exports other than the Stage 4 `.xlsx` workbook, multi-currency, tax/VAT, and statutory rules remain deferred and unauthorized.
+
+**Stage 4 changes (2026-11-25):** the user requested a real `.xlsx` export for the live app and demo, color alignment for the sidebar ledger selector and New ledger action, and Edit buttons in Business Transactions, General Journal, and Adjustments without allowing posted entries to be edited. All three are implemented and automatically verified: 245/245 static checks, 44/44 unit/integration tests, 10/10 Playwright tests, and `npm audit` 0. The demo exports only its in-memory sample data and continues to simulate PDF output.

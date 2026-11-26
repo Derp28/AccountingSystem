@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**Stage 3 approved and complete - local access, multiple ledgers, four financial statements, print/PDF, and self-hosted distribution.** Stage 2 remains the approved accounting core. Stage 3 adds a local username/password gate, one local account owning multiple ledgers, and a Reports page with the Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and a supporting trial balance, all on an adjusted/unadjusted basis. The live app prints or saves the current statement/all four statements through the browser print dialog; the public GitHub Pages demo shows a simulated PDF preview and creates no file. Distribution is source on GitHub plus self-hosted Docker/release copies, plus the static demo. Automated verification passes (232 static checks, 41 backend tests, 9 Playwright tests, `npm audit` 0), and the four-statement build was deployed to GitHub Pages and verified live on 2026-11-04. The user approved the Stage 3 UI on 2026-11-05; Stage 3 is complete and no later-stage scope is authorized. The live database is at schema 7 after migration 007 and the pre-007 backup. Period close, exports, multi-currency, tax/VAT, and statutory rules remain deferred.
+**Stage 4 - real active-ledger `.xlsx` export, draft-only Edit actions, and sidebar ledger controls.** Stage 3 remains approved and complete: local username/password access, one local account owning multiple ledgers, the four financial statements plus a supporting trial balance, print/PDF, and self-hosted distribution. Stage 4 adds a dependency-free client-side OOXML/ZIP writer and a ten-tab workbook (Summary, Chart of Accounts, Business Transactions, General Journal, Adjustments, Trial Balance, SOCI, SOE, SOFP, SOCF) exported from the active ledger in both the live app and the demo, with drafts included in entry tabs and posted-only figures in the statements. Draft rows/cards now expose Edit in Business Transactions, General Journal, and Adjustments; posted entries remain locked. The sidebar ledger selector and New ledger action now use the dark sidebar surface with light text. Final local regression and demo browser export on 2026-11-26: 245 static checks, 44 unit/integration tests, 10 Playwright tests, `npm audit` 0, a rebuilt static demo (47 files), and a real 82,576-byte ten-sheet demo download with zero formula tags. The public demo's PDF preview remains simulated; the `.xlsx` download is real. Pages deployment and the live-demo recheck are pending. The live database is at schema 7 after migration 007 and the pre-007 backup. Period close, exports other than this `.xlsx` workbook, multi-currency, tax/VAT, and statutory rules remain deferred.
 
 ## Discovery summary
 
@@ -120,6 +120,28 @@ Do not copy the database while writes are in progress. Restore by stopping the s
 - The server keeps its loopback default and refuses non-loopback hosts unless `LEDGERLINE_CONTAINER=1`.
 - `.github/workflows/release.yml` builds and pushes `ghcr.io/<owner>/<repo>` on version tags and creates a GitHub Release. It was not executed in this environment.
 
+## Stage 4 — spreadsheet export, draft edit actions, and sidebar polish
+
+### Workbook export
+
+- `public/js/xlsx.js` writes a minimal OOXML workbook into a stored ZIP with no spreadsheet library. User text is written as inline strings, so `=`, `+`, `-`, and `@` content cannot become a formula; money is numeric and comes from integer cents.
+- `public/js/ledger-export.js` builds ten tabs from the active ledger: Summary, Chart of Accounts, Business Transactions, General Journal, Adjustments, Trial Balance, SOCI, SOE, SOFP, and SOCF.
+- Business Transactions excludes adjustments; General Journal includes every entry and line; Adjustments contains only `ADJUSTMENT` entries. All three entry tabs include drafts with a Status column. The statements use posted entries only.
+- The Trial Balance and four statements use the current Reports page basis, `from`, `to`, and `asOf` values. The Reports export handler fetches a fresh `api.bootstrap()` before building so entries posted through the API are included.
+- The download filename is `ledgerline-{safe-ledger-slug}-{to-or-asOf}.xlsx`; unsafe characters are removed and an invalid date falls back to today.
+- The live app and demo share the same client-side writer. The demo exports only its in-memory sample data and continues to show a simulated PDF preview that creates no file. No runtime dependency was added.
+
+### Draft edit actions
+
+- Business Transactions, General Journal, and Adjustments show an Edit action only on draft rows/cards. Posted and reversed entries expose view/reverse actions only.
+- `openEntryEditor` refuses non-draft entries with a posted-entry-locked toast, reinforcing the server and database immutability rules.
+- The editor refreshes line totals and remove buttons on mount so existing draft amounts display correctly.
+
+### Sidebar ledger controls
+
+- The ledger selector and New ledger action use dark translucent surfaces, light text, visible borders, and dark native select options; they no longer appear as a light paper block on the green sidebar.
+- Hover and keyboard focus states remain visible, and the controls fit at 390 px.
+
 ## Key design choices
 
 - One local account per installation can own multiple ledgers (D-023). A ledger is a set of books, not an accounting period; period close is deferred.
@@ -127,17 +149,17 @@ Do not copy the database while writes are in progress. Restore by stopping the s
 - Minimal editable seed Chart of Accounts using the approved hundreds series, with codes incrementing by one within each category.
 - Currency is chosen at onboarding, stored with the workspace, and used for formatting only; no conversion.
 - Posted entries are immutable; one reversal per entry; reversals cannot be reversed.
-- No tax, VAT, statutory, period-close, automated adjustment, export, or multi-currency logic. Multiple ledgers are supported as separate sets of books (D-023); they are not a multi-user workspace.
+- No tax, VAT, statutory, period-close, automated adjustment, or multi-currency logic. The Stage 4 `.xlsx` export is a client-side read-only snapshot of the active ledger; no other export format is implemented. Multiple ledgers are supported as separate sets of books (D-023); they are not a multi-user workspace.
 - Account codes use the approved category hundred-series ranges; server validation and database triggers enforce the rule. New accounts prefill the next unused code in the selected category and remain editable.
 - Material accounting policies are recorded in `DECISIONS.md`; D-016, D-018, D-019, and D-021 are approved.
 
 ## Testing and evidence
 
-- `node scripts/check.mjs`: 232 static, schema, API, security, auth, reports, print, demo, and distribution checks.
-- `node scripts/test.mjs`: 41 unit/integration tests, including a real child-process restart with session persistence, owner's-equity roll-forward, cash-flow classification/reconciliation, and cash transfers.
-- `node scripts/test-e2e.mjs`: 9 Playwright tests (claim/sign-in/lock, ledger switching, critical path, rename, mobile navigation, four statements plus trial balance, print/PDF, screenshots, XSS).
+- `node scripts/check.mjs`: 245 static, schema, API, security, auth, reports, print, export, demo, edit-action, sidebar, and distribution checks.
+- `node scripts/test.mjs`: 44 unit/integration tests, including a real child-process restart with session persistence, owner's-equity roll-forward, cash-flow classification/reconciliation, cash transfers, and the `.xlsx` writer/workbook.
+- `node scripts/test-e2e.mjs`: 10 Playwright tests (claim/sign-in/lock, ledger switching, critical path with draft edits, rename, mobile navigation and sidebar colors, four statements plus trial balance, print/PDF, `.xlsx` export, screenshots, XSS).
 - `npm audit`: 0 vulnerabilities across runtime and dev dependencies.
-- Screenshots at 1440, 768, and 390 px are in `screenshots/`, refreshed on 2026-11-02 after the statement tabs were added.
+- Screenshots at 1440, 768, and 390 px are in `screenshots/`, refreshed on 2026-11-26 after the edit actions and sidebar color fixes.
 - Exact commands and results are recorded in `TEST_PLAN.md`.
 
 ## Risks and mitigations
@@ -154,10 +176,14 @@ Do not copy the database while writes are in progress. Restore by stopping the s
 | Password or session compromise | scrypt hashes, server-side sessions, HttpOnly/SameSite cookies, CSRF tokens, lockout, offline reset that revokes sessions |
 | Cross-ledger data leak | Ledger-scoped queries and indexes plus database isolation triggers; integration tests |
 | Wrong adjusted/unadjusted numbers | Server-side integer-cent calculation, explicit basis filter, integration invariant tests |
+| Spreadsheet formula injection or float drift | Inline-string cells for all text; numeric cells from integer cents; unit tests assert no formula elements and exact money values |
+| Export omits entries or uses stale data | Fresh `api.bootstrap()` before building; entry tabs include drafts with status; E2E downloads and checks all ten tabs |
+| Posted entry edited through the UI | Edit action rendered only for drafts; `openEntryEditor` guard; server/API and database immutability remain authoritative |
+| Misleading demo export claim | Demo banner and Reports note distinguish the real `.xlsx` download from the simulated PDF preview; static checks assert the wording |
 | Shipping personal data in a release | `data/` and `.env` git-ignored and excluded from the image; fresh empty database per copy |
 | Responsive regressions | 1440/768/390 screenshots, mobile drawer test, overflow assertion |
 | Scope creep | Requirements registry, explicit deferrals, Gate 2 stop |
-| Tooling on Windows UNC | All commands run through WSL; test scripts set the Node path and browser libraries |
+| Windows path with spaces | Scripts resolve the project root from their own file location; no shell working-directory assumption |
 
 ## Phase gates
 
@@ -166,3 +192,5 @@ Do not copy the database while writes are in progress. Restore by stopping the s
 3. **G2 — Accounting integrity:** passed; Stage 2 UI approved and policies D-016, D-018, D-019, D-021 confirmed on 2026-10-20. See `TEST_PLAN.md` evidence.
 4. **G3 — Final product signoff / later-stage scope:** passed 2026-10-20 for the Stage 2 scope.
 5. **G4 - Stage 3 local access, multiple ledgers, four financial statements, print/PDF, distribution:** passed 2026-11-05. Implemented and automatically verified 2026-11-02 (232 static checks, 41 backend tests, 9 E2E tests, `npm audit` 0). The live database is at schema 7 after migration 007, with a pre-007 backup. UI approved by the user on 2026-11-05.
+6. **G5 - Public interactive demo on GitHub Pages:** passed 2026-10-24 and re-verified through 2026-11-04. The workflow publishes `docs/` to `gh-pages`; the live demo carries no persistence claims and keeps PDF output simulated.
+7. **G6 - Stage 4 `.xlsx` export, draft edit actions, and sidebar ledger controls:** pending. Local regression and demo browser export passed 2026-11-26; Pages deployment and the live-demo recheck remain. See `TASKS.yaml` and `TEST_PLAN.md`.

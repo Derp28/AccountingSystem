@@ -2,7 +2,7 @@
 
 Single source of truth for requirements and acceptance criteria. Task mappings refer to `TASKS.yaml`. Deferred items are explicit and are not claimed as implemented.
 
-**Stage 3 scope (current):** local username/password access, one local account owning multiple ledgers, and a Reports page with the four financial statements — Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), and Statement of Cash Flows (SOCF) — plus a supporting trial balance, on an adjusted/unadjusted basis, plus source-plus-self-hosted distribution. Requirements ONB-001..ONB-006 are superseded by the AUTH and LED groups below; their original acceptance criteria remain as historical record.
+**Stage 4 scope (current):** Stage 3 plus a real, client-built `.xlsx` export of the active ledger, draft-only Edit actions in the three entry lists, and sidebar ledger controls that match the dark sidebar. The export includes the Summary, Chart of Accounts, Business Transactions, General Journal, Adjustments, Trial Balance, SOCI, SOE, SOFP, and SOCF tabs. Requirements ONB-001..ONB-006 are superseded by the AUTH and LED groups below; their original acceptance criteria remain as historical record.
 
 ## Onboarding
 
@@ -53,6 +53,17 @@ Single source of truth for requirements and acceptance criteria. Task mappings r
 | REP-010 | Live-app print and Save as PDF | The live app prints the active statement or all four statements through the browser print dialog, with a letterhead, the full statement names, and the ledger name. Print output omits navigation, banners, controls, and error states. | T-421 |
 | REP-011 | Demo PDF preview | The public demo never creates or downloads a PDF. Its PDF action opens a clearly labeled simulated preview with a disabled Save as PDF button and states that no file is created or downloaded. | T-422 |
 
+## Spreadsheet export (Stage 4)
+
+| ID | Requirement | Acceptance criteria | Task |
+|---|---|---|---|
+| EXP-001 | Active-ledger `.xlsx` download | The Reports page exports the current active ledger as a real `.xlsx` file in both the local app and the public demo. The file is built in the browser and downloaded locally; no server upload, no persistence change, and no `.slsx` variant. | T-427, T-429, T-431 |
+| EXP-002 | Workbook sections | The workbook contains ten named tabs: Summary, Chart of Accounts, Business Transactions, General Journal, Adjustments, Trial Balance, SOCI, SOE, SOFP, and SOCF. | T-428, T-431 |
+| EXP-003 | Entry tabs and drafts | Business Transactions excludes adjustments; General Journal includes every entry and line; Adjustments contains only adjustment entries. All three entry tabs include drafts and show a Status column. The statements include posted entries only. | T-428, T-431 |
+| EXP-004 | Current report filters | The Trial Balance and four statements use the current Reports page basis, from, to, and as-of values. The entry tabs export the complete active-ledger history so drafts and posted entries are not silently omitted. | T-428, T-429 |
+| EXP-005 | Exact money and safe text | Money cells are numeric and generated from integer cents without binary-float arithmetic or formatted strings. User-entered text is written as inline strings, never formula cells, so `=`, `+`, `-`, or `@` content cannot execute. | T-427, T-431 |
+| EXP-006 | Real download, honest demo | The live app and demo both use the shared client-side writer and trigger a real browser download. The demo states that only its in-memory sample data is exported and that PDF previews remain simulated; no PDF file is created. No spreadsheet library is added. | T-427, T-429, T-430, T-431 |
+| EXP-007 | Filename and feedback | The filename is `ledgerline-{safe-ledger-slug}-{to-or-asOf}.xlsx`; unsafe characters are removed and an invalid date falls back to today. The export button disables while building, reports success with the filename and tab count, and shows an error toast if the workbook cannot be built. | T-427, T-429, T-431 |
 
 ## User interface
 
@@ -62,17 +73,18 @@ Single source of truth for requirements and acceptance criteria. Task mappings r
 | UI-002 | Dashboard | Shows personalized greeting, workspace name, financial summary, trial-balance totals, recent entries, and quick actions. All figures derive from posted journal lines returned by the API; none are hardcoded into the view. | T-103, T-208 |
 | UI-003 | Chart of Accounts list | Groups accounts by the five categories; supports search, category/status filters, balances, and an empty state. | T-104 |
 | UI-004 | Chart of Accounts editor | Add/edit code, name, category, description, cash-flow activity, and active status. New accounts prefill the next unused code in the selected category (starting at that category's minimum) while remaining editable. Code uniqueness and category hundred-series ranges are validated. Accounts cannot be hard-deleted. | T-104, T-305, T-419 |
-| UI-005 | Business Transactions list | Shows date, type, reference, description, amount, and status; supports search and type/status filters. | T-105 |
+| UI-005 | Business Transactions list | Shows date, type, reference, description, amount, and status; supports search and type/status filters. Draft rows expose Edit; posted and reversed rows do not. | T-105, T-432 |
 | UI-006 | Transaction editor | Supports Sales Invoice, Purchase Bill, Cash Receipt, Cash Payment, and General Journal; dynamic debit/credit rows; running totals; draft save; clear validation. | T-105 |
-| UI-007 | General Journal view | Chronological entries with date, entry number, source, memo, debit/credit totals, and status. Rows expand to show lines. Supports status/type filters. | T-106 |
+| UI-007 | General Journal view | Chronological entries with date, entry number, source, memo, debit/credit totals, and status. Rows expand to show lines. Supports status/type filters. Draft rows expose Edit; posted and reversed rows do not. | T-106, T-432 |
 | UI-008 | Journal editor | Dynamic lines, account selection, debit/credit inputs, running totals, and a balanced/unbalanced indicator. Draft save and server-side posting are available. | T-106, T-206 |
-| UI-009 | Adjustments | Lists adjustment entries and provides a manual editor with adjustment type and required reason. Clearly states that no calculations are automated. | T-107 |
+| UI-009 | Adjustments | Lists adjustment entries and provides a manual editor with adjustment type and required reason. Clearly states that no calculations are automated. Draft cards expose Edit; posted and reversed cards do not. | T-107, T-432 |
 | UI-010 | Post/reverse confirmations | Confirmation dialogs show consequences; submit buttons disable while pending; errors appear inline; no false success is reported. | T-105, T-106, T-107, T-109 |
 | UI-011 | Loading, empty, error, and success states | Relevant screens provide loading feedback, empty states, inline errors, and success toasts. | T-103, T-109 |
 | UI-012 | Data-mode labeling | The persistent banner states that data is saved locally to `data/accounting.sqlite`, that posted entries are immutable, and that corrections use reversals. “Reload data” re-reads SQLite and deletes nothing; no control claims to simulate saving or posting. | T-102, T-109, T-209 |
 | UI-013 | Accessibility | Labels, visible focus, native dialog focus behavior, Escape handling, `aria-live` feedback, contrast, semantic tables, and reduced-motion support. | T-108 |
 | UI-014 | Responsive layout | Works at 360–1440 px. Primary flows have no page-level horizontal scroll. Tables adapt or scroll within their region. Touch targets are adequate. | T-108 |
 | UI-015 | Visual system | Ledger-paper design tokens, system fonts only, consistent buttons/tables/forms/badges/dialogs/navigation. No external asset requests. | T-101, T-108 |
+| UI-016 | Sidebar ledger controls | The ledger selector and New ledger action use the dark sidebar surface, light text, and visible borders; they do not appear as a light paper block. Hover and keyboard focus states remain visible at 360–1440 px. | T-433 |
 
 ## Accounting behavior
 
@@ -95,7 +107,7 @@ Single source of truth for requirements and acceptance criteria. Task mappings r
 | ACC-015 | Account lifecycle | Deactivation blocks new use and posting but preserves historical posted lines. Reactivation is allowed. | T-104, T-204 |
 | ACC-016 | Accounting equation | Dashboard displays Assets = Liabilities + Equity + Net income from posted data with a check indicator. | T-103, T-208 |
 | ACC-017 | Dates and ordering | Entry dates must be valid. Journal ordering is date descending, then entry number. Future dates are not restricted. | T-106, T-206 |
-| ACC-018 | Deferred accounting scope | Period close, automated adjustment schedules, multi-currency conversion, exports, tax/VAT, and statutory rules remain deferred. **Stage 3 note:** the trial balance and the four financial statements are now implemented as read-only reports (REP-001..011); period close is still not implemented. | T-408, T-417, T-420, explicit deferral |
+| ACC-018 | Deferred accounting scope | Period close, automated adjustment schedules, multi-currency conversion, exports other than the Stage 4 `.xlsx` workbook, tax/VAT, and statutory rules remain deferred. **Stage 3 note:** the trial balance and the four financial statements are implemented as read-only reports (REP-001..011); period close is still not implemented. **Stage 4 note:** the active-ledger `.xlsx` export is implemented as EXP-001..007; PDF output remains browser print in the live app and a simulated preview in the demo. | T-408, T-417, T-420, T-434, explicit deferral |
 | ACC-019 | Cash-flow activity rules | Operating activities cover customers, suppliers, rent, salaries, and utilities. Investing activities cover company investments such as equipment and supplies. Financing activities cover owner capital, drawings, and loan proceeds or payments. Non-cash movements such as depreciation never appear in the cash-flow statement. | T-418, T-419 |
 
 ## Database (Stage 2)
@@ -156,4 +168,6 @@ Single source of truth for requirements and acceptance criteria. Task mappings r
 | QA-012 | Auth and ledger isolation tests | Integration covers claim, login, lockout, reset-with-session-revocation, second-ledger creation, per-ledger account codes, entry isolation, and cross-ledger account rejection. | T-411, T-412 |
 | QA-013 | Report invariant tests | Integration covers adjusted vs unadjusted trial balance, linked-reversal exclusion, income statement period totals, balance-sheet balance and computed accumulated earnings, and invalid basis/date rejection. | T-412 |
 | QA-014 | Distribution checks | Static checks assert the Docker image pins Node 24, runs as non-root, publishes on host loopback, and that `data/`/`.env` are ignored and excluded from the image. | T-410, T-413 |
+| QA-015 | Export tests | Unit tests verify the stored-ZIP/OOXML structure, inline-string formula safety, exact numeric money cells, all ten tabs, draft status, posted-only statement values, and safe filenames. E2E verifies a real browser download, tab list, report filters, formula-safe text, and that generated workbooks open in Excel without a repair prompt. | T-431 |
+| QA-016 | Demo export verification | Static build and browser verification confirm the demo exports its in-memory sample data to a real `.xlsx`, creates no PDF, makes no persistence claim, and reports no console errors. | T-430, T-431, T-434 |
 

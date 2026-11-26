@@ -49,6 +49,7 @@ const ICONS = {
     '<path d="M5 3h14v18H5z"/><path d="M9 3v18M12 7h4M12 11h4M12 15h2"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/>',
+  download: '<path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/>',
 };
 
 export function icon(name, size = 18, className = "") {

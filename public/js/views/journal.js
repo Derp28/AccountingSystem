@@ -23,6 +23,7 @@ export function renderJournal(container, state) {
     .map((entry) => {
       const debit = entryTotalDebit(entry);
       const credit = entryTotalCredit(entry);
+      const isDraft = entry.status === "DRAFT";
       const lines = (entry.lines || [])
         .map((line) => {
           const account = getAccount(state.accounts, line.accountId);
@@ -66,6 +67,16 @@ export function renderJournal(container, state) {
           <td data-label="Status">${statusBadge(entry)}</td>
           <td data-label="Actions">
             <div class="row-actions">
+              ${
+                isDraft
+                  ? `<button class="btn btn-secondary btn-sm" type="button" data-edit-entry="${escapeHtml(
+                      entry.id,
+                    )}" aria-label="Edit draft ${escapeHtml(entry.entryNo)}">${icon(
+                      "edit",
+                      14,
+                    )} Edit</button>`
+                  : ""
+              }
               <button class="btn btn-ghost btn-icon btn-sm" type="button" data-open-entry="${escapeHtml(
                 entry.id,
               )}" aria-label="Open ${escapeHtml(entry.entryNo)}">${icon("eye", 15)}</button>
@@ -230,6 +241,16 @@ export function renderJournal(container, state) {
       const expanded = button.getAttribute("aria-expanded") === "true";
       button.setAttribute("aria-expanded", String(!expanded));
       linesRow.hidden = expanded;
+    });
+  });
+
+  container.querySelectorAll("[data-edit-entry]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const entry = getState().entries.find(
+        (candidate) => candidate.id === button.dataset.editEntry,
+      );
+      if (!entry || entry.status !== "DRAFT") return;
+      openEntryEditor({ entry, allowedTypes: [entry.sourceType] });
     });
   });
 

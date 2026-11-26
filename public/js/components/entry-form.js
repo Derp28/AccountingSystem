@@ -177,6 +177,14 @@ export function openEntryEditor({
   onSaved = null,
 } = {}) {
   const state = getState();
+  if (entry && entry.status !== "DRAFT") {
+    showToast(
+      "Posted entry is locked",
+      "Posted entries are immutable. Create a reversal to correct this entry.",
+      "error",
+    );
+    return;
+  }
   const isEdit = Boolean(entry);
   let activeSourceType = entry?.sourceType || sourceType;
   const types = allowedTypes || (entry ? [activeSourceType] : [sourceType]);
@@ -541,6 +549,9 @@ export function openEntryEditor({
 
         onSaved?.();
       });
+
+      refreshRemoveButtons();
+      refreshTotals();
     },
   });
 }

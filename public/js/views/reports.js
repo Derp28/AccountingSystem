@@ -5,6 +5,8 @@ import { icon } from "../icons.js";
 import { pageHeader } from "../components/ui.js";
 import { openModal } from "../components/modal.js";
 import { showToast } from "../components/toast.js";
+import { downloadBytes } from "../download.js";
+import { buildLedgerWorkbook } from "../ledger-export.js";
 
 /**
  * The four financial statements plus the trial balance, which stays as a
@@ -490,7 +492,7 @@ function openPdfPreview(entries, { ledgerName, currency }) {
           .join("")}
       </div>
     </div>
-    <p class="pdf-preview-note">${icon("info", 16)} <span>Demo only: this is a simulated PDF preview. No file is created or downloaded. In the self-hosted app, <strong>Print / Save as PDF</strong> opens your browser's print dialog.</span></p>
+    <p class="pdf-preview-note">${icon("info", 16)} <span>Demo only: this is a simulated PDF preview. No PDF file is created or downloaded. Use <strong>Export .xlsx</strong> for a real spreadsheet file. In the self-hosted app, <strong>Print / Save as PDF</strong> opens your browser's print dialog.</span></p>
   `;
   openModal({
     title: "PDF preview",
@@ -623,8 +625,8 @@ export function renderReports(container, state) {
       ${pageHeader({
         title: "Financial statements",
         description: demo
-          ? `Unadjusted and adjusted statements for ${ledgerName} in ${currency}. Reports use posted entries only and are calculated in this browser tab.`
-          : `Unadjusted and adjusted statements for ${ledgerName} in ${currency}. Reports use posted entries only and are calculated on the server.`,
+          ? `Unadjusted and adjusted statements for ${ledgerName} in ${currency}. Reports use posted entries only and are calculated in this browser tab. Export downloads a real .xlsx workbook from this demo tab.`
+          : `Unadjusted and adjusted statements for ${ledgerName} in ${currency}. Reports use posted entries only and are calculated on the server. Export downloads a real .xlsx workbook for the active ledger.`,
         actions: `
           <button class="btn btn-secondary" type="button" data-print-report>${icon(
             demo ? "save" : "printer",
@@ -634,6 +636,11 @@ export function renderReports(container, state) {
             "printer",
             16,
           )} ${demo ? "Preview all" : "Print all"}</button>
+          <button class="btn btn-secondary" type="button" data-export-xlsx
+            title="Download an .xlsx workbook with one tab per section">${icon(
+              "download",
+              16,
+            )} Export .xlsx</button>
         `,
       })}
       <div data-report-controls>${controlsHtml(filters)}</div>
@@ -642,7 +649,7 @@ export function renderReports(container, state) {
           ? `<p class="report-demo-note">${icon(
               "info",
               15,
-            )} <span>Demo only: PDF previews are simulated; no file is created or downloaded.</span></p>`
+            )} <span>Demo only: PDF previews are simulated; the .xlsx export downloads a real workbook from the sample data in this browser tab.</span></p>`
           : ""
       }
       <div id="report-body" role="tabpanel" tabindex="0"
@@ -695,6 +702,56 @@ export function renderReports(container, state) {
     wireControls();
   }
 
+  async function exportWorkbook() {
+    const button = qs("[data-export-xlsx]", container);
+    const original = button?.innerHTML;
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = `<span class="spinner" aria-hidden="true"></span> Exporting…`;
+    }
+    try {
+      Object.assign(filters, readControls());
+      state.reports = { ...filters };
+      const [bootstrap, trialBalance, statements] = await Promise.all([
+        api.bootstrap(),
+        api.trialBalance({ asOf: filters.asOf, basis: filters.basis }),
+        allStatements(filters),
+      ]);
+      const byTab = Object.fromEntries(statements.map(({ tab, data }) => [tab, data]));
+      const { filename, bytes } = buildLedgerWorkbook({
+        workspace: bootstrap.workspace || state.workspace,
+        accounts: bootstrap.accounts || [],
+        entries: bootstrap.entries || [],
+        filters: { ...filters },
+        reports: {
+          trialBalance,
+          incomeStatement: byTab["income-statement"],
+          ownerEquity: byTab["owner-equity"],
+          balanceSheet: byTab["balance-sheet"],
+          cashFlows: byTab["cash-flows"],
+        },
+        generatedAt: new Date(),
+      });
+      downloadBytes(bytes, filename);
+      showToast(
+        "Spreadsheet exported",
+        `${filename} includes 10 tabs; drafts appear only in the entry tabs.`,
+        "success",
+      );
+    } catch (error) {
+      showToast(
+        "Could not export the spreadsheet",
+        error?.message || "The workbook could not be built.",
+        "error",
+      );
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = original;
+      }
+    }
+  }
+
   function wireControls() {
     controls.querySelectorAll("[data-report-tab]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -738,5 +795,6 @@ export function renderReports(container, state) {
   container
     .querySelector("[data-print-all]")
     ?.addEventListener("click", () => printAll(container, filters, ledgerName, currency));
+  container.querySelector("[data-export-xlsx]")?.addEventListener("click", exportWorkbook);
   load();
 }

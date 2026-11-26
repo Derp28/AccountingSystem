@@ -2,9 +2,9 @@
 
 ## Scope
 
-Stage 3 verifies the local Express + SQLite implementation of the approved Ledgerline UI plus local username/password access, multiple ledgers, and the adjusted/unadjusted financial statements: Statement of Comprehensive Income (SOCI), Statement of Owner's Equity (SOE), Statement of Financial Position (SOFP), Statement of Cash Flows (SOCF), and the supporting trial balance. It covers persistence, migrations, posting, immutability, reversal, duplicate/partial-write prevention, transaction-to-journal consistency, security controls, sessions and CSRF, ledger isolation, the statements and their reconciliation, print/PDF output, and the critical browser path. The public demo's simulated PDF preview is also verified. Stage 1 was a UI-only prototype and is recorded separately. Evidence for the approved Stage 2 core remains valid.
+Stage 4 verifies the local Express + SQLite implementation of the approved Ledgerline UI plus local username/password access, multiple ledgers, the adjusted/unadjusted financial statements, a real client-built `.xlsx` export of the active ledger, draft-only Edit actions, and the sidebar ledger controls. It covers persistence, migrations, posting, immutability, reversal, duplicate/partial-write prevention, transaction-to-journal consistency, security controls, sessions and CSRF, ledger isolation, the statements and their reconciliation, print/PDF output, the ten-tab workbook and its formula safety, and the critical browser path. The public demo's simulated PDF preview and real sample-data `.xlsx` download are also verified. Stage 1 was a UI-only prototype and is recorded separately. Evidence for the approved Stage 2 and Stage 3 cores remains valid.
 
-Period close, exports, automated adjustment schedules, tax/VAT/statutory logic, multi-currency conversion, and automated backup are out of scope and are not claimed.
+Period close, exports other than the Stage 4 `.xlsx` workbook, automated adjustment schedules, tax/VAT/statutory logic, multi-currency conversion, and automated backup are out of scope and are not claimed.
 
 ## Environment
 
@@ -14,7 +14,7 @@ Period close, exports, automated adjustment schedules, tax/VAT/statutory logic, 
 - E2E: `http://127.0.0.1:3100`, database `data/e2e.sqlite`
 - Browser: Playwright Chromium; `npm run test:e2e` launches `scripts/test-e2e.mjs` and `scripts/e2e-server.mjs`
 - SQLite: Node built-in `node:sqlite`
-- Date of the latest local evidence run: 2026-11-04; deployed-site check: 2026-11-04; Stage 3 UI approval: 2026-11-05
+- Date of the latest local evidence run: 2026-11-26; deployed-site check: pending
 
 ## Commands
 
@@ -53,6 +53,12 @@ npm run demo:build            # rebuild the static GitHub Pages demo into docs/
 | Owner's equity does not roll forward | High | SOE integration test checks beginning capital, investments, net income, withdrawals, ending capital, and balance-sheet tie; E2E asserts the ending capital |
 | Cash-flow statement misclassifies or fails to reconcile | High | Per-account cash-flow class; integration tests for operating/investing/financing, non-cash exclusion, cash transfers, both bases, and ending cash vs Cash balance; E2E asserts section totals |
 | PDF claim is misleading or print output leaks chrome | Medium | Live app uses the browser print dialog with print-only CSS; E2E generates a real `%PDF-` file and checks the letterhead/hidden chrome. Demo uses an explicitly simulated preview with a disabled save button and no file |
+| Spreadsheet formula injection | High | All user text is written as OOXML inline strings; unit test asserts no `<f>` formula elements for `=`, `+`, `-`, and `@` payloads |
+| Export money drift or formatted strings | High | Numeric cells are generated from integer cents (no binary-float money); unit/E2E helpers decode the numeric values |
+| Export omits drafts or mixes adjustments | High | Business Transactions excludes adjustments, General Journal includes all entries, Adjustments filters `ADJUSTMENT`; all three include drafts with a Status column; unit test asserts the tab content |
+| Export uses stale or wrong-period data | Medium | Export fetches a fresh `api.bootstrap()`; statements use current basis/from/to/asOf; E2E downloads the workbook and checks the ten tabs |
+| Posted entry edited through the UI | High | Edit action is draft-only; `openEntryEditor` refuses non-drafts; API/database immutability tests remain authoritative |
+| Demo export claim is misleading | Medium | Demo banner and Reports note distinguish the real `.xlsx` download from the simulated PDF; static checks assert the wording |
 | Personal data shipped in a copy | High | `data/`/`.env` ignored and excluded from the image; fresh empty database per copy |
 | Database file exposed | Medium | `0600` mode test; path not returned by API |
 | Restart loses data | High | Child-process stop/start test against one database file |
@@ -68,13 +74,13 @@ npm run demo:build            # rebuild the static GitHub Pages demo into docs/
 
 Command: `node scripts/check.mjs`
 
-Result: **232 passed, 0 failed.** Covers required files, syntax/import resolution, absence of browser storage, Stage 1 accounting fixtures, migration invariants, integer-cent columns, trigger count and messages, account-code range triggers, per-category sequential seed codes, WAL/foreign-key/busy-timeout/`BEGIN IMMEDIATE`, database permissions, loopback refusal, CSP and security middleware, API route registration, prepared-SQL checks, no `eval`, client API usage, package scripts, and `.gitignore`. Stage 3 additions assert migration 005's auth/ledger schema and isolation triggers, the scrypt/session/lockout safeguards, the cookie and CSRF middleware, the three original report routes and adjusted-basis filter, migration 007's cash-flow classes, owner's equity and cash-flow routes/services, the SOCI/SOE/SOFP/SOCF/TB tabs and tooltips, print/PDF CSS, the demo's simulated preview and sample-period defaults, the Docker loopback/boundary settings, and that `data/`/`.env` stay ignored while `.env.example` is kept.
+Result: **245 passed, 0 failed.** Covers required files, syntax/import resolution, absence of browser storage, Stage 1 accounting fixtures, migration invariants, integer-cent columns, trigger count and messages, account-code range triggers, per-category sequential seed codes, WAL/foreign-key/busy-timeout/`BEGIN IMMEDIATE`, database permissions, loopback refusal, CSP and security middleware, API route registration, prepared-SQL checks, no `eval`, client API usage, package scripts, and `.gitignore`. Stage 3 additions assert migration 005's auth/ledger schema and isolation triggers, the scrypt/session/lockout safeguards, the cookie and CSRF middleware, the three original report routes and adjusted-basis filter, migration 007's cash-flow classes, owner's equity and cash-flow routes/services, the SOCI/SOE/SOFP/SOCF/TB tabs and tooltips, print/PDF CSS, the demo's simulated preview and sample-period defaults, the Docker loopback/boundary settings, and that `data/`/`.env` stay ignored while `.env.example` is kept. Stage 4 additions require the xlsx writer/export/download files, all ten workbook tabs, formula-safe inline strings, demo export wording, zero spreadsheet dependencies, draft-only Edit actions in all three views, the posted-entry editor guard, and the dark sidebar ledger-control colors.
 
 ### Unit and integration tests
 
 Command: `npm test`
 
-Result: **41 tests, 41 passed, 0 failed** (10 unit + 31 integration).
+Result: **44 tests, 44 passed, 0 failed** (13 unit + 31 integration).
 
 Unit coverage:
 
@@ -85,6 +91,8 @@ Unit coverage:
 - Account codes are three-digit numbers inside the category hundred series, with field-specific range errors.
 - Unbalanced, inactive-account, and two-sided-line posting validation.
 - Adjustment type/reason requirements.
+- Stored-ZIP/OOXML writer structure, numeric money cells, inline-string text, and formula safety.
+- Ten-tab workbook content, draft status, posted-only statement figures, and safe `.xlsx` filenames (including invalid date fallback).
 
 Integration coverage:
 
@@ -120,17 +128,18 @@ Integration coverage:
 
 Command: `npm run test:e2e`
 
-Result: **9 tests, 9 passed, 0 failed.**
+Result: **10 tests, 10 passed, 0 failed.**
 
 1. First run: the claim screen fits a 390 px viewport; short password, mismatched confirmation, and empty ledger name each produce inline errors; valid input creates the account and opens the dashboard.
 2. Lock and sign-in: "Lock now" shows the sign-in screen (not first-run setup), a wrong password shows a generic error, and the correct password returns to the dashboard.
 3. Ledgers: a second ledger is created, becomes active with its own seeded Chart of Accounts, and the sidebar switches back to the first ledger.
-4. Critical path: seeded COA → add account (asserting prefilled next codes `104` and `502`, then rejecting an out-of-range code) → sale draft → post → journal → adjustment draft/post → reversal → reload → dashboard trial balance/equation.
+4. Critical path: seeded COA → add account (asserting prefilled next codes `104` and `502`, then rejecting an out-of-range code) → sale draft → Edit from Business Transactions → save changes → post → assert posted rows have no Edit → journal draft → Edit from General Journal → save → delete → adjustment draft → Edit from Adjustments → save → post → assert posted cards have no Edit → reversal → reload → dashboard trial balance/equation.
 5. Profile/ledger rename through settings → reload → renamed values persist.
-6. Mobile navigation: 390 px drawer, Escape close, no page-level horizontal overflow.
+6. Mobile navigation: 390 px drawer, Escape close, no page-level horizontal overflow; the ledger selector computes a dark background and light foreground on the sidebar, and the New ledger action is visible.
 7. Reports: five abbreviated tabs (SOCI, SOE, SOFP, SOCF, TB) with full names in `aria-label`/`data-tooltip` and a visible hover tooltip; adjusted/unadjusted trial balance; SOCI net income 3,500; SOE ending capital 13,200; SOFP total liabilities + equity 14,200; SOCF operating 2,500, investing (4,000), financing 9,700, net change and ending cash 8,200; print media hides the sidebar and shows the letterhead; `Print / Save as PDF` calls the browser print dialog; `page.pdf()` produces a real `%PDF-` buffer; Print all creates a four-statement sheet. Test data is posted through the API for June 2026.
-8. Screenshot capture at 1440×900, 768×1024, and 390×844 for Dashboard, Chart of Accounts, Business Transactions, General Journal, Adjustments, and Reports.
-9. XSS: user markup in account name/description renders as text; no script/img/svg execution; no page errors.
+8. Export: clicks Export .xlsx, waits for a real browser download, reads the ZIP, verifies the ten sheet names, checks numeric money cells, and confirms formula-like text is stored without `<f>` elements. The workbook contains the current report filters and the active-ledger entries.
+9. Screenshot capture at 1440×900, 768×1024, and 390×844 for Dashboard, Chart of Accounts, Business Transactions, General Journal, Adjustments, and Reports.
+10. XSS: user markup in account name/description renders as text; no script/img/svg execution; no page errors.
 
 ### Dependency audit
 
@@ -151,7 +160,7 @@ Directory: `screenshots/`
 - `dashboard-390.png`, `accounts-390.png`, `transactions-390.png`, `journal-390.png`, `adjustments-390.png`, `reports-390.png`
 - `mobile-navigation-390.png`
 - `setup-1440.png`, `setup-390.png` (superseded by the Stage 3 claim screen)
-- The 2026-11-04 screenshots were regenerated after the page-header and Chart of Accounts cleanups; each page header starts with the page title, and the accounts table shows Code, Account, Status, and Actions.
+- The 2026-11-25 screenshots were regenerated after the Stage 4 edit-action and sidebar-control changes; each page header starts with the page title, the accounts table shows Code, Account, Status, and Actions, draft rows show Edit, and the sidebar ledger controls use the dark sidebar surface.
 
 ## Requirement-to-evidence map
 
@@ -167,16 +176,18 @@ Directory: `screenshots/`
 | REP-009 | Reports E2E tab labels, `aria-label`/`data-tooltip`, hover tooltip, full statement headings; static tab/tooltip checks |
 | REP-010 | Reports E2E stubs `window.print`, checks print-media letterhead/hidden chrome, generates a `%PDF-` file, and verifies Print all renders four statements; static print-CSS checks |
 | REP-011 | Demo build + browser walkthrough of the simulated preview (disabled Save as PDF, no-file note, Preview all); static demo flag/preview checks |
+| EXP-001..007 | Unit writer/workbook tests; reports E2E real download with ten tabs, numeric money, and formula-safe text; static export/demo/dependency checks; browser check of the built demo |
 | UI-001..015 | E2E auth, critical path, mobile drawer, reports, settings rename, screenshots, static checks, CSS/accessibility review |
+| UI-016 | E2E computed dark background/light foreground for the ledger selector; static CSS checks; 1440/390 screenshots |
 | ACC-001..017 | Unit validation, integration lifecycle/immutability/reversal/balances/equation, E2E critical path, schema triggers |
-| ACC-018 | Period close, exports, tax, multi-currency, and automated adjustments deferred; the four financial statements plus trial balance are implemented as REP-001..011 |
+| ACC-018 | Period close, other export formats, tax, multi-currency, and automated adjustments deferred; the four financial statements plus trial balance are implemented as REP-001..011, and the Stage 4 active-ledger `.xlsx` workbook is implemented as EXP-001..007 |
 | ACC-019 | Cash-flow activity rules encoded in the starter chart and per-account `cash_flow_class`; SOCF integration covers operating/investing/financing and excludes non-cash movements |
 | DB-001..008, DB-010..012 | Migration/schema checks, integrity tests, real restart, ledger isolation triggers, prepared-SQL check |
 | DB-009 | Manual stopped-server backup documented in `PLANS.md`; automated backup deferred |
 | DB-013 | Migration 005 preserves legacy data by assigning it to `ledger-default`; migrations 006/007 preserve posted history and add the starter chart/cash-flow classes; string checks plus backups of the live file |
 | SEC-001..008 | Loopback checks, Origin/content-type/body-limit tests, CSRF/session tests, XSS test, SQL injection test, error hygiene review, `0600` test, CSP/static checks, `npm audit` |
 | DIST-001..003 | Docker/compose/.env.example/README static checks; `data/` and `.env` excluded from git and the image |
-| QA-001..014 | Traceability self-audit, 232 static checks, 41 backend tests, 9 E2E tests, restart, screenshots, exact evidence in this file |
+| QA-001..016 | Traceability self-audit, 245 static checks, 44 unit/integration tests, 10 E2E tests, restart, screenshots, export verification, exact evidence in this file |
 
 This mapping is a **self-audit** by the implementing agent; no independent external audit is claimed.
 
@@ -258,10 +269,17 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 | 2026-11-04 | Browser verification of the Chart of Accounts cleanup | PASS | Demo at 1440 and 390 px: table headers are Code, Account, Status, and Actions with no Normal balance or Balance column; category Group balance summary remains; no horizontal overflow at 390 px; no page errors |
 | 2026-11-04 | GitHub Pages deployment of the Chart of Accounts cleanup | PASS | Pushed `43c9326`; workflow run 41813634508 succeeded and published `gh-pages` commit 1933306 ("Demo site from 43c9326..."). A fresh Chromium context at <https://derp28.github.io/AccountingSystem/?v=43c9326#/accounts> verified Code/Account/Status/Actions headers, no Normal balance or Balance headers, the ₱128,950.00 Group balance summary, the demo's no-persistence note, five report tabs, no horizontal overflow at 390 px, and no page or console errors. |
 | 2026-11-05 | User Stage 3 UI approval | PASS | User approved the Stage 3 UI; recorded in `UI_REVIEW.md` and `TASKS.yaml` (GATE-4). No code changes; the prior 232/232 static, 41/41 backend, and 9/9 E2E evidence remains valid. |
+| 2026-11-25 | Stage 4 implementation | PASS | Added `public/js/xlsx.js`, `public/js/ledger-export.js`, `public/js/download.js`, the Reports export action, draft-only Edit actions in Business Transactions, General Journal, and Adjustments, the posted-entry editor guard, and the dark sidebar ledger-control styles. No runtime dependency was added. |
+| 2026-11-26 | `npm run check` | PASS, 245/245 | Adds export files/tabs/formula-safety/demo-wording/no-spreadsheet-dependency checks, draft-edit checks, and dark sidebar ledger-control checks. |
+| 2026-11-26 | `npm test` | PASS, 44/44 | Unit + integration; includes the OOXML writer, ten-tab workbook, exact numeric money, formula-safe inline strings, and safe filename fallback. |
+| 2026-11-26 | `npm run test:e2e` | PASS, 10/10 | Auth, critical path with draft edits and sidebar-color assertions, reports/print, real `.xlsx` download, screenshots, and XSS. Screenshots regenerated at 1440, 768, and 390 px with a draft transaction and draft adjustment visible. |
+| 2026-11-26 | `npm audit` | PASS, 0 vulnerabilities | Runtime and dev dependency tree. |
+| 2026-11-26 | `npm run demo:build` | PASS, 47 files | 16 entries, 2 ledgers, 34 accounts; the demo carries the real `.xlsx` export and the simulated-PDF wording. |
+| 2026-11-26 | Demo `.xlsx` browser verification | PASS | Served the built `docs/` site at `http://127.0.0.1:4174`, opened Reports, and clicked Export .xlsx. The browser downloaded `ledgerline-general-ledger-2023-2023-12-31.xlsx` (82,576 bytes) with ten sheets, 849 inline-string cells, and zero `<f>` formula tags; the demo banner states PDF previews are simulated and the `.xlsx` export is real. |
 
 ## Known limitations
 
-- Period close, exports, automated adjustment schedules, tax/VAT/statutory rules, and multi-currency conversion are deferred. The trial balance and the four financial statements (SOCI, SOE, SOFP, SOCF) **are** implemented (REP-001..011).
+- Period close, export formats other than the Stage 4 `.xlsx` workbook, automated adjustment schedules, tax/VAT/statutory rules, and multi-currency conversion are deferred. The trial balance and the four financial statements (SOCI, SOE, SOFP, SOCF) **are** implemented (REP-001..011), and the active-ledger `.xlsx` export is implemented (EXP-001..007).
 - Automated backup is not implemented; only the documented stopped-server file copy exists.
 - The password protects the running app, not the SQLite file. Data-at-rest protection requires full-disk encryption; the app says so on the access screen.
 - There is no email recovery or password-reset link; recovery is the offline `npm run auth:reset-password` command.
@@ -274,8 +292,9 @@ This mapping is a **self-audit** by the implementing agent; no independent exter
 - The Statement of Cash Flows is a direct cash-line presentation: line labels are the counter-account names, cash transfers are excluded, and the section totals reconcile to the Cash account. It is not a jurisdiction-specific statutory format, and no tax/VAT/period-close rules are applied.
 - The Statement of Comprehensive Income equals net income because the app has no other comprehensive income items. The Statement of Owner's Equity uses the computed accumulated-earnings line from the balance sheet; the books are not closed.
 - The public demo's PDF preview is simulated. It creates no file and downloads nothing; only the self-hosted live app uses the browser's Print / Save as PDF dialog.
+- The `.xlsx` export is a read-only snapshot of one active ledger. It uses the current Reports period controls for the statements, exports the complete entry history for the entry tabs, and has no import, scheduled export, or server-side export job. The workbook uses basic styles and formulas are not written.
 - The demo's sample transactions are the owner's December 2023 set; the 11 December hiring agreement has no entry until payroll is recorded.
-- The Stage 3 UI was approved by the user on 2026-11-05. The 2026-11-04 review fixed the report-chip contrast, mobile drawer close-button layering, and mobile chip wrapping, and removed the redundant page eyebrows at the user's request; the remaining minor observations are in `UI_REVIEW.md`.
+- The Stage 3 UI was approved by the user on 2026-11-05. The 2026-11-04 review fixed the report-chip contrast, mobile drawer close-button layering, and mobile chip wrapping, and removed the redundant page eyebrows at the user's request; the remaining minor observations are in `UI_REVIEW.md`. Stage 4 changes were requested by the user on 2026-11-25 and are recorded in `UI_REVIEW.md`.
 - Report tabs support Tab/Shift+Tab and Enter/Space but not arrow-key roving focus; the report body is a labelled tabpanel.
 - Account codes are constrained to three-digit category hundred-series ranges by D-018; out-of-range codes are rejected by the API, UI, and database triggers.
 - Reversals use the approved D-019 policy: server current UTC date and `GENERAL_JOURNAL` source type.

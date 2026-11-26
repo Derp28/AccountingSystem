@@ -4,8 +4,8 @@
 
 meta:
   project: Ledgerline accounting app
-  phase: Stage 3 approved and complete — local access, multiple ledgers, four financial statements plus trial balance, print/PDF, and self-hosted distribution; runtime localized to this folder on 2026-10-24
-  updated: 2026-11-05
+  phase: Stage 4 — real active-ledger .xlsx export, draft-only Edit actions, and sidebar ledger controls; Stage 3 remains approved
+  updated: 2026-11-26
 
 tasks:
   - id: T-001
@@ -568,6 +568,86 @@ tasks:
     status: done
     verification: "2026-11-04 user request: removed the Normal balance and Balance columns from the Chart of Accounts table. Rows now show Code, Account, Status, and Actions; the category header keeps its Group balance summary and the editor help still explains category-derived normal balance. npm run check 232/232, npm test 41/41, npm run test:e2e 9/9; screenshots regenerated, demo rebuilt to 44 files, and a 1440/390 browser pass found no Normal balance or Balance column headers, the group balance summary, no horizontal overflow at 390 px, and no page errors. Deployed as 43c9326; workflow run 41813634508 succeeded and published gh-pages commit 1933306; the live demo was rechecked at 1440/390 with the reduced table, the Group balance summary, five report tabs, and no page or console errors. The user approved the Stage 3 UI on 2026-11-05."
 
+  - id: T-427
+    title: Client-side OOXML .xlsx writer and download helper
+    owner: UI Agent
+    phase: 6
+    requirements: [EXP-001, EXP-005, EXP-007]
+    depends_on: [T-426]
+    files: [public/js/xlsx.js, public/js/download.js, public/js/icons.js, tests/helpers/xlsx.js, tests/unit/export.test.js]
+    status: done
+    verification: "Added a dependency-free stored-ZIP OOXML writer and a browser download helper. Text is written as inline strings so =, +, -, and @ content cannot become a formula; money is written as numeric cells from integer cents with no binary floating-point arithmetic. Unit tests verify the ZIP entries, workbook structure, exact money cells, inline-string text, and formula safety. npm run test:unit passes 13/13."
+
+  - id: T-428
+    title: Ten-tab active-ledger workbook builder
+    owner: UI Agent
+    phase: 6
+    requirements: [EXP-002, EXP-003, EXP-004, EXP-005]
+    depends_on: [T-427]
+    files: [public/js/ledger-export.js, tests/unit/export.test.js]
+    status: done
+    verification: "public/js/ledger-export.js builds Summary, Chart of Accounts, Business Transactions, General Journal, Adjustments, Trial Balance, SOCI, SOE, SOFP, and SOCF from one active-ledger state plus the current report filters. Business Transactions excludes adjustments; General Journal includes every entry and line; Adjustments contains only ADJUSTMENT entries; all three entry tabs include drafts with a Status column; statements use posted entries only. Unit tests assert all ten tabs, draft status, posted-only report figures, numeric money, and formula-safe text; Excel opened the generated workbooks without a repair prompt."
+
+  - id: T-429
+    title: Reports export action with current filters and fresh data
+    owner: UI Agent
+    phase: 6
+    requirements: [EXP-001, EXP-004, EXP-006, EXP-007, UI-011]
+    depends_on: [T-428]
+    files: [public/js/views/reports.js, public/js/icons.js, tests/e2e/reports.spec.js]
+    status: done
+    verification: "The Reports page has an Export .xlsx action. It fetches a fresh api.bootstrap() so API-posted entries are included, reads the current basis/from/to/asOf controls, builds the active-ledger workbook, and triggers a real browser download named ledgerline-{safe-slug}-{date}.xlsx. The button disables while building and shows a success toast with the filename and tab count or an error toast on failure. The E2E test downloads the workbook, verifies all ten sheet names, numeric cells, and formula-safe text."
+
+  - id: T-430
+    title: Demo export wording and static build
+    owner: UI Agent
+    phase: 6
+    requirements: [EXP-006, QA-016]
+    depends_on: [T-429]
+    files: [demo/main.js, demo/seed.js, scripts/build-demo.mjs, scripts/check.mjs]
+    status: done
+    verification: "The demo banner and Reports note state that PDF previews are simulated while the .xlsx export downloads a real workbook from the in-memory sample data; no file is created for PDF. npm run demo:build produced the static site from the untouched public UI and demo engine, and the demo export was browser-verified with ten tabs and no persistence or PDF claims."
+
+  - id: T-431
+    title: Export tests and static checks
+    owner: QA Agent
+    phase: 6
+    requirements: [EXP-001, EXP-002, EXP-003, EXP-004, EXP-005, EXP-006, EXP-007, QA-015, QA-016]
+    depends_on: [T-427, T-428, T-429, T-430]
+    files: [tests/unit/export.test.js, tests/helpers/xlsx.js, tests/e2e/reports.spec.js, scripts/check.mjs]
+    status: done
+    verification: "Unit coverage verifies the stored-ZIP/OOXML writer, ten tabs, draft status, posted-only statements, exact numeric money, formula-safe inline strings, and safe filenames. E2E coverage downloads a real workbook, checks its tabs and formula-safe text, and verifies current report filters. Static checks require the writer/export files, all ten tabs, formula safety, demo wording, and zero spreadsheet dependencies. npm run check passes 245/245 and npm run test:unit passes 13/13."
+
+  - id: T-432
+    title: Draft-only Edit actions in the three entry lists
+    owner: UI Agent
+    phase: 6
+    requirements: [UI-005, UI-007, UI-009, ACC-003, ACC-006, QA-011]
+    depends_on: [T-426]
+    files: [public/js/views/transactions.js, public/js/views/journal.js, public/js/views/adjustments.js, public/js/components/entry-form.js, tests/e2e/critical-path.spec.js, scripts/check.mjs]
+    status: done
+    verification: "Business Transactions, General Journal, and Adjustments now show an Edit action on draft rows/cards only; posted and reversed entries show no Edit action. openEntryEditor refuses non-draft entries with a posted-entry-locked toast, and the editor now refreshes line totals and remove buttons on mount so existing draft amounts display correctly. The critical-path E2E edits a transaction, journal, and adjustment draft, asserts posted entries have no Edit action, and passes 3/3."
+
+  - id: T-433
+    title: Align sidebar ledger controls with the dark sidebar
+    owner: UI Agent
+    phase: 6
+    requirements: [UI-001, UI-013, UI-015, UI-016, QA-011]
+    depends_on: [T-426]
+    files: [public/css/app.css, tests/e2e/critical-path.spec.js, scripts/check.mjs, screenshots]
+    status: done
+    verification: "The ledger selector and New ledger action now use dark translucent surfaces, light text, visible borders, and dark native select options instead of light paper surfaces. E2E computes the selector colors on the mobile drawer and asserts a dark background and light foreground; static checks assert the dark values. Screenshots at 1440 and 390 px confirm the controls match the sidebar."
+
+  - id: T-434
+    title: Stage 4 documentation, regression, and live Pages verification
+    owner: Orchestrator
+    phase: 6
+    requirements: [EXP-001, EXP-002, EXP-003, EXP-004, EXP-005, EXP-006, EXP-007, QA-010, QA-011, QA-015, QA-016, ACC-018]
+    depends_on: [T-427, T-428, T-429, T-430, T-431, T-432, T-433]
+    files: [AGENTS.md, PLANS.md, DECISIONS.md, TEST_PLAN.md, UI_REVIEW.md, README.md, REQUIREMENTS.md, TASKS.yaml, screenshots]
+    status: in_progress
+    verification: "Documentation and final local regression complete on 2026-11-26: npm run check 245/245, npm test 44/44, npm run test:e2e 10/10, npm audit 0, npm run demo:build 47 files, and a real demo .xlsx download (82,576 bytes; ten sheets; zero formula tags). Pending: commit/push, Pages workflow, and live-demo export recheck."
+
 gates:
   - id: GATE-0
     name: Discovery
@@ -593,3 +673,7 @@ gates:
     name: Public interactive demo on GitHub Pages
     status: passed
     evidence: "On 2026-10-24 the project was pushed to https://github.com/Derp28/AccountingSystem (force-push over the unrelated v0.2.0 snapshot, approved by the user) and a static demo was added for GitHub Pages (D-034). Build: scripts/build-demo.mjs, which seeds a temporary SQLite database through the real claim/draft/post/adjust/reverse services and copies the untouched public/ UI next to an in-memory API engine. Verification on 2026-11-02: 232/232 static checks, 41/41 backend tests, 9/9 Playwright tests, npm audit 0, and npm run demo:build (44 files; 16 entries, 2 ledgers, 34 accounts). A browser walkthrough of docs/ served locally covered five report tabs and full-name tooltips, SOCI 44,300/18,850/25,450, SOE ending 122,450, SOFP 128,950 = 6,500 + 122,450, SOCF 25,300 - 16,500 + 97,000 = 105,800, the sample December 2023 period defaults, and the simulated PDF preview with a disabled Save as PDF and explicit no-file note. Publishing: the workflow builds docs/ and force-pushes it to the gh-pages branch, which enabled Pages automatically. The demo makes no persistence or PDF claims: the build rewrites persistence sentences and fails if the source wording changes. Deployment on 2026-11-04: push b4fc6b1; workflow run 41752716402 succeeded and published gh-pages commit 3d030d8; a fresh Chromium context verified the live site's five tabs, SOCI/SOE/SOFP/SOCF values, and simulated preview with a disabled Save as PDF. The UI review fixes were pushed as 8895072; workflow run 41755729378 succeeded and published gh-pages commit 615b618; a fresh Chromium context verified the fixed chip (rgb(31,77,58) on rgb(226,238,230)), the labelled tabpanel, the simulated preview with no download, and the 390 px drawer close button at scroll top, with no page or console errors. The final page-header cleanup was pushed as 22cad53; workflow run 41800659639 succeeded and published gh-pages commit c737923; a fresh Chromium context verified zero page-header eyebrows on all six pages at 1440 px and on Reports at 390 px, the single-line SOE chip, and the no-file demo note, with no page errors. The Chart of Accounts cleanup was pushed as 43c9326; workflow run 41813634508 succeeded and published gh-pages commit 1933306; a fresh Chromium context verified Code/Account/Status/Actions headers, no Normal balance or Balance headers, the ₱128,950.00 Group balance summary, the no-persistence demo note, five report tabs, no horizontal overflow at 390 px, and no page or console errors."
+  - id: GATE-6
+    name: Stage 4 .xlsx export, draft edit actions, and sidebar ledger controls
+    status: pending
+    evidence: "Local implementation, regression, and demo verification passed 2026-11-26: 245/245 static checks, 44/44 unit/integration tests, 10/10 Playwright tests, npm audit 0, a 47-file demo build, and a real ten-sheet demo .xlsx download (82,576 bytes, zero formula tags). Pending commit/push, Pages workflow, and live-demo export check."

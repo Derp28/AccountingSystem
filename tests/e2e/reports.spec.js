@@ -1,5 +1,12 @@
+import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 import { ensureAuthenticated, postEntry } from "./helpers.js";
+import {
+  cellValue,
+  readZipEntries,
+  workbookSheetNames,
+  worksheetXml,
+} from "../helpers/xlsx.js";
 
 test("reports page renders the four statements, the trial balance, and print output", async ({
   page,
@@ -202,6 +209,93 @@ test("reports page renders the four statements, the trial balance, and print out
     document.getElementById("print-all")?.remove();
     document.body.classList.remove("is-print-all");
   });
+
+  expect(pageErrors).toEqual([]);
+});
+
+test("reports exports a real .xlsx workbook with all sections and formula-safe text", async ({
+  page,
+}) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await ensureAuthenticated(page);
+  await postEntry(page, {
+    sourceType: "GENERAL_JOURNAL",
+    date: "2026-07-01",
+    memo: '=HYPERLINK("http://example.com","export")',
+    lines: [
+      { accountId: "acct-100", description: "Cash", debitCents: 100000, creditCents: 0 },
+      { accountId: "acct-400", description: "Revenue", debitCents: 0, creditCents: 100000 },
+    ],
+  });
+
+  await page.getByRole("link", { name: "Reports", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Financial statements" })).toBeVisible();
+
+  // The as-of statements use this date; the period statements use the period.
+  await page.locator("[data-report-asof]").fill("2026-07-31");
+  await page.locator("[data-refresh-report]").click();
+  await page.locator('[data-report-tab="income-statement"]').click();
+  await page.locator("[data-report-from]").fill("2026-07-01");
+  await page.locator("[data-report-to]").fill("2026-07-31");
+  await page.locator("[data-report-basis]").selectOption("adjusted");
+  await page.locator("[data-refresh-report]").click();
+  await expect(page.getByTestId("report-income-statement")).toContainText(
+    "2026-07-01 to 2026-07-31",
+  );
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: /Export \.xlsx/ }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^ledgerline-.+-2026-07-31\.xlsx$/);
+  await expect(page.getByText("Spreadsheet exported")).toBeVisible();
+
+  const output = test.info().outputPath(download.suggestedFilename());
+  await download.saveAs(output);
+  const entries = readZipEntries(fs.readFileSync(output));
+  expect(workbookSheetNames(entries)).toEqual([
+    "Summary",
+    "Chart of Accounts",
+    "Business Transactions",
+    "General Journal",
+    "Adjustments",
+    "Trial Balance",
+    "SOCI",
+    "SOE",
+    "SOFP",
+    "SOCF",
+  ]);
+
+  const summary = worksheetXml(entries, "Summary");
+  expect(cellValue(summary, "A1")).toBe("Item");
+  expect(summary).toContain("Current active ledger only");
+  expect(summary).toContain("Include drafts");
+
+  const transactions = worksheetXml(entries, "Business Transactions");
+  expect(transactions).toContain(
+    "=HYPERLINK(&quot;http://example.com&quot;,&quot;export&quot;)",
+  );
+  expect(transactions).not.toContain("<f");
+
+  const journal = worksheetXml(entries, "General Journal");
+  expect(journal).toContain(
+    "=HYPERLINK(&quot;http://example.com&quot;,&quot;export&quot;)",
+  );
+
+  const soci = worksheetXml(entries, "SOCI");
+  expect(cellValue(soci, "A1")).toContain("Statement of Comprehensive Income");
+  expect(soci).toContain("2026-07-01 to 2026-07-31");
+  expect(soci).toContain("<v>1000.00</v>");
+
+  const trialBalance = worksheetXml(entries, "Trial Balance");
+  expect(trialBalance).toContain("Posted entries only");
+  expect(trialBalance).toContain("as of 2026-07-31");
+
+  for (const name of workbookSheetNames(entries)) {
+    expect(worksheetXml(entries, name)).not.toContain("<f");
+  }
 
   expect(pageErrors).toEqual([]);
 });

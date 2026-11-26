@@ -35,6 +35,7 @@ export function renderTransactions(container, state) {
     .map((entry) => {
       const meta = getSourceMeta(entry.sourceType);
       const amount = entryTotalDebit(entry);
+      const isDraft = entry.status === "DRAFT";
       return `
         <tr
           data-transaction-row
@@ -56,6 +57,16 @@ export function renderTransactions(container, state) {
           <td data-label="Status">${statusBadge(entry)}</td>
           <td data-label="Actions">
             <div class="row-actions">
+              ${
+                isDraft
+                  ? `<button class="btn btn-secondary btn-sm" type="button" data-edit-entry="${escapeHtml(
+                      entry.id,
+                    )}" aria-label="Edit draft ${escapeHtml(entry.entryNo)}">${icon(
+                      "edit",
+                      14,
+                    )} Edit</button>`
+                  : ""
+              }
               <button class="btn btn-ghost btn-icon btn-sm" type="button" data-open-entry="${escapeHtml(
                 entry.id,
               )}" aria-label="Open ${escapeHtml(entry.entryNo)}">${icon("eye", 15)}</button>
@@ -202,6 +213,16 @@ export function renderTransactions(container, state) {
     openEntryEditor({
       sourceType: "SALES_INVOICE",
       allowedTypes: TRANSACTION_SOURCE_TYPES,
+    });
+  });
+
+  container.querySelectorAll("[data-edit-entry]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const entry = getState().entries.find(
+        (candidate) => candidate.id === button.dataset.editEntry,
+      );
+      if (!entry || entry.status !== "DRAFT") return;
+      openEntryEditor({ entry, allowedTypes: [entry.sourceType] });
     });
   });
 

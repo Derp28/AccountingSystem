@@ -51,22 +51,64 @@ test("critical path: COA, transaction, post, journal, adjustment, reversal, relo
   await saleRows.nth(1).locator("[data-line-credit]").fill("150.00");
   await dialog.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Draft saved" }).last()).toBeVisible();
-  await expect(page.locator("[data-transaction-row]").filter({ hasText: "E2E sale" })).toBeVisible();
 
-  // Post the sale and confirm it appears in the shared journal.
-  await page
-    .locator("[data-transaction-row]")
-    .filter({ hasText: "E2E sale" })
-    .getByRole("button", { name: /Open/ })
-    .click();
+  // A draft exposes Edit directly in Business Transactions.
+  let saleRow = page.locator("[data-transaction-row]").filter({ hasText: "E2E sale" });
+  await expect(saleRow).toBeVisible();
+  await saleRow.getByRole("button", { name: /Edit/ }).click();
+  dialog = page.locator("dialog[open]");
+  await expect(dialog).toContainText("Edit draft");
+  await dialog.locator("#entry-memo").fill("E2E sale edited");
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Draft saved" }).last()).toBeVisible();
+  saleRow = page.locator("[data-transaction-row]").filter({ hasText: "E2E sale edited" });
+  await expect(saleRow).toBeVisible();
+
+  // Post the sale and confirm it appears in the shared journal. Posted rows
+  // must not expose an edit action.
+  await saleRow.getByRole("button", { name: /Open/ }).click();
   await page.getByRole("button", { name: /Post entry/ }).click();
   await page.locator("dialog[open]").locator("[data-confirm]").click();
   await expect(page.getByText("Entry posted")).toBeVisible();
+  await expect(saleRow.getByRole("button", { name: /Edit/ })).toHaveCount(0);
 
   await page.getByRole("link", { name: "General Journal", exact: true }).click();
-  const journalRow = page.locator("[data-journal-row]").filter({ hasText: "E2E sale" });
+  const journalRow = page.locator("[data-journal-row]").filter({ hasText: "E2E sale edited" });
   await expect(journalRow).toBeVisible();
   await expect(journalRow).toContainText("SI-");
+  await expect(journalRow.getByRole("button", { name: /Edit/ })).toHaveCount(0);
+
+  // A draft journal entry exposes Edit in the General Journal too.
+  await page.getByRole("button", { name: /New journal entry/i }).click();
+  dialog = page.locator("dialog[open]");
+  await dialog.locator("#entry-memo").fill("E2E journal draft");
+  const journalRows = dialog.locator(".line-row");
+  await journalRows.nth(0).locator("[data-line-account]").selectOption("acct-100");
+  await journalRows.nth(0).locator("[data-line-debit]").fill("25.00");
+  await journalRows.nth(1).locator("[data-line-account]").selectOption("acct-400");
+  await journalRows.nth(1).locator("[data-line-credit]").fill("25.00");
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Draft saved" }).last()).toBeVisible();
+
+  let journalDraftRow = page
+    .locator("[data-journal-row]")
+    .filter({ hasText: "E2E journal draft" });
+  await journalDraftRow.getByRole("button", { name: /Edit/ }).click();
+  dialog = page.locator("dialog[open]");
+  await expect(dialog).toContainText("Edit draft");
+  await dialog.locator("#entry-memo").fill("E2E journal draft edited");
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Draft saved" }).last()).toBeVisible();
+  journalDraftRow = page
+    .locator("[data-journal-row]")
+    .filter({ hasText: "E2E journal draft edited" });
+  await expect(journalDraftRow).toBeVisible();
+
+  // Remove the journal draft so later views keep their expected data.
+  await journalDraftRow.getByRole("button", { name: /Open/ }).click();
+  await page.getByRole("button", { name: "Delete draft" }).click();
+  await page.locator("dialog[open]").locator("[data-confirm]").click();
+  await expect(page.getByText("Draft deleted")).toBeVisible();
 
   // Create and post a manual adjustment with a type and reason.
   await page.getByRole("link", { name: "Adjustments", exact: true }).click();
@@ -84,14 +126,28 @@ test("critical path: COA, transaction, post, journal, adjustment, reversal, relo
   await dialog.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Draft saved" }).last()).toBeVisible();
 
-  await page
+  // A draft adjustment exposes Edit directly on its card.
+  let adjustmentCard = page
     .locator("[data-adjustment-card]")
-    .filter({ hasText: "Accrue October salaries" })
-    .getByRole("button", { name: /Open/ })
-    .click();
+    .filter({ hasText: "Accrue October salaries" });
+  await adjustmentCard.getByRole("button", { name: /Edit/ }).click();
+  dialog = page.locator("dialog[open]");
+  await expect(dialog).toContainText("Edit draft");
+  await dialog
+    .locator("#entry-adjustment-reason")
+    .fill("October salaries not yet paid; edit confirmed.");
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Draft saved" }).last()).toBeVisible();
+  adjustmentCard = page
+    .locator("[data-adjustment-card]")
+    .filter({ hasText: "Accrue October salaries" });
+  await expect(adjustmentCard).toContainText("edit confirmed");
+
+  await adjustmentCard.getByRole("button", { name: /Open/ }).click();
   await page.getByRole("button", { name: /Post entry/ }).click();
   await page.locator("dialog[open]").locator("[data-confirm]").click();
   await expect(page.getByRole("status").filter({ hasText: "Entry posted" }).last()).toBeVisible();
+  await expect(adjustmentCard.getByRole("button", { name: /Edit/ })).toHaveCount(0);
 
   // Reopen the adjustment and reverse it with a reason.
   await page
@@ -152,6 +208,21 @@ test("mobile navigation opens, closes with Escape, and keeps the layout usable",
   const menu = page.getByRole("button", { name: "Open navigation" });
   await menu.click();
   await expect(page.getByRole("link", { name: "Chart of Accounts", exact: true })).toBeVisible();
+
+  // The ledger controls sit on the dark sidebar, not on a light paper surface.
+  const ledgerSelect = page.locator("[data-ledger-switcher]");
+  const ledgerStyles = await ledgerSelect.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, color: style.color };
+  });
+  const rgb = (value) => value.match(/\d+/g).slice(0, 3).map(Number);
+  const background = rgb(ledgerStyles.background);
+  const foreground = rgb(ledgerStyles.color);
+  expect(ledgerStyles.background).not.toBe("rgb(255, 253, 248)");
+  expect(background[0] + background[1] + background[2]).toBeLessThan(240);
+  expect(foreground[0] + foreground[1] + foreground[2]).toBeGreaterThan(600);
+  await expect(page.getByRole("button", { name: /New ledger/ })).toBeVisible();
+
   await page.keyboard.press("Escape");
   await expect(menu).toHaveAttribute("aria-expanded", "false");
 
